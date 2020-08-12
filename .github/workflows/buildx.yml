@@ -17,9 +17,10 @@ jobs:
 
       - name: setup docker buildx
         id: buildx
-        uses: crazy-max/ghaction-docker-builder@v3
+        uses: crazy-max/ghaction-docker-buildx@v3
         with:
-          version: latest
+          qemu-version: latest
+          buildx-version: latest
 
       - name: setup docker cache
         uses: actions/cache@v2
@@ -31,21 +32,23 @@ jobs:
 
       - name: configure build
         id: config
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
           if [[ $GITHUB_REF == refs/tags/v* ]]; then
             echo ::set-output name=version::${GITHUB_REF#refs/tags/}
           elif [[ $GITHUB_REF == refs/heads/master ]]; then
-            echo ::set-output name=version::latest"
+            echo ::set-output name=version::latest
           elif [[ $GITHUB-REF == refs/heads/* ]]; then
             echo ::set-output name=version::${GITHUB_REF#refs/heads/}
           else
             echo ::set-output name=version::edge
           fi
 
-          echo ::set-output name=docker_platforms::linux/amd64,linux/arm/v6,linux/arm/v6,linux/arm64,linux/386
-          echo ::set-output name=docker_image::${{ secrets.DOCKER_USERNAME }}/${{ github.event.repository.name }}
+          echo ::set-output name=docker_platforms::linux/amd64,linux/arm/v6,linux/arm/v6,linux/arm64
+          echo ::set-output name=docker_image::${DOCKERHUB_USERNAME}/pihole
           echo ::set-output name=build_date::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
-          echo ::set-output gitref::${GITHUB_SHA::8}
+          echo ::set-output name=gitref::${GITHUB_SHA::8}
 
       - name: print configuration
         run: |
@@ -54,18 +57,17 @@ jobs:
           echo GITHUB_REF=$GITHUB_REF
           echo GITHUB_SHA=$GITHUB_SHA
           echo version=${{ steps.config.outputs.version }}
-          echo docker_image=${{ steps.config.outputs.docker_image }}
           echo docker_platforms=${{ steps.config.outputs.docker_platforms }}
           echo available_platforms=${{ steps.buildx.outputs.platforms }}
 
       - name: build docker image
         run: |
           docker buildx build \
-            --output      "image,push=false" \
+            --output      "type=image,push=false" \
             --cache-to    "type=local,dest=/tmp/buildx-cache" \
             --cache-from  "type=local,src=/tmp/buildx-cache" \
             --platform    "${{ steps.config.outputs.docker_platforms }}" \
-            --tag         "${{ steps.config.outputs.docker_image}}:${{ steps.config.outputs.version }} " \
+            --tag         "${{ steps.config.outputs.docker_image}}:${{ steps.config.outputs.version }}" \
             .
 
       - name: docker hub login
@@ -78,12 +80,14 @@ jobs:
 
       - name: push docker image
         if: success()
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
           docker buildx build \
-            --output      "image,push=true" \
+            --output      "type=image,push=true" \
             --cache-from  "type=local,src=/tmp/buildx-cache" \
             --platform    "${{ steps.config.outputs.docker_platforms }}" \
-            --tag         "${{ steps.config.outputs.docker_image}}:${{ steps.config.outputs.version }} " \
+            --tag         "${{ steps.config.outputs.docker_image}}:${{ steps.config.outputs.version }}" \
             .
 
       - name: cleanup
