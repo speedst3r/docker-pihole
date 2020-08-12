@@ -5,7 +5,7 @@
 fix_capabilities() {
     setcap CAP_NET_BIND_SERVICE,CAP_NET_RAW,CAP_NET_ADMIN+ei $(which pihole-FTL) || ret=$?
 
-    if [[ $ret -ne 0 && "${DNSMASQ_USER:-root}" != "root" ]]; then
+    if [[ $ret -ne 0 && "${PIHOLE_USER:-root}" != "root" ]]; then
         echo "ERROR: Failed to set capabilities for pihole-FTL. Cannot run as non-root."
         exit 1
     fi
@@ -13,7 +13,7 @@ fix_capabilities() {
 
 prepare_configs() {
     # Done in /start.sh, don't do twice
-    PH_TEST=true . $PIHOLE_INSTALL
+    PH_TEST=true . /pihole-install.sh
     distro_check
     installConfigs
     touch "$setupVars"
@@ -138,21 +138,21 @@ setup_dnsmasq() {
     setup_dnsmasq_dns "$dns1" "$dns2"
     setup_dnsmasq_interface "$interface"
     setup_dnsmasq_listening_behaviour "$dnsmasq_listening_behaviour"
-    setup_dnsmasq_user "${DNSMASQ_USER}"
+    setup_dnsmasq_user "${PIHOLE_USER}"
     ProcessDNSSettings
 }
 
 setup_dnsmasq_user() {
-    local DNSMASQ_USER="${1}"
+    local PIHOLE_USER="${1}"
 
     # Run DNSMASQ as root user to avoid SHM permission issues
     if grep -r -q '^\s*user=' /etc/dnsmasq.* ; then
         # Change user that had been set previously to root
         for f in $(grep -r -l '^\s*user=' /etc/dnsmasq.*); do
-            sed -i "/^\s*user=/ c\user=${DNSMASQ_USER}" "${f}"
+            sed -i "/^\s*user=/ c\user=${PIHOLE_USER}" "${f}"
         done
     else
-      echo -e "\nuser=${DNSMASQ_USER}" >> /etc/dnsmasq.conf
+      echo -e "\nuser=${PIHOLE_USER}" >> /etc/dnsmasq.conf
     fi
 }
 
@@ -297,7 +297,7 @@ setup_ipv4_ipv6() {
 test_configs() {
     set -e
     echo -n '::: Testing pihole-FTL DNS: '
-    sudo -u ${DNSMASQ_USER:-root} pihole-FTL test || exit 1
+    sudo -u ${PIHOLE_USER:-root} pihole-FTL test || exit 1
     echo -n '::: Testing lighttpd config: '
     lighttpd -t -f /etc/lighttpd/lighttpd.conf || exit 1
     set +e

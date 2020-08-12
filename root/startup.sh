@@ -1,13 +1,11 @@
 #!/bin/bash -e
+
 # Dockerfile variables
-export TAG
 export ServerIP
 export ServerIPv6
-export PYTEST
 export PHP_ENV_CONFIG
 export PHP_ERROR_LOG
 export HOSTNAME
-export WEBLOGDIR
 export DNS1
 export DNS2
 export DNSSEC
@@ -27,43 +25,36 @@ export WEBUIBOXEDLAYOUT
 
 export adlistFile='/etc/pihole/adlists.list'
 
-# The below functions are all contained in bash_functions.sh
-. /bash_functions.sh
+# The below functions are all contained in functions.sh
+. /functions.sh
 
 # Ensure we have all functions available to update our configurations
 . /opt/pihole/webpage.sh
 
 # PH_TEST prevents the install from actually running (someone should rename that)
-PH_TEST=true . $PIHOLE_INSTALL
+PH_TEST=true . /install.sh
 
 echo " ::: Starting docker specific checks & setup for docker pihole/pihole"
-
-# TODO:
-#if [ ! -f /.piholeFirstBoot ] ; then
-#    echo " ::: Not first container startup so not running docker's setup, re-create container to run setup again"
-#else
-#    regular_setup_functions
-#fi
 
 fix_capabilities
 load_web_password_secret
 generate_password
 validate_env || exit 1
 prepare_configs
-change_setting "PIHOLE_INTERFACE" "$PIHOLE_INTERFACE"
-change_setting "IPV4_ADDRESS" "$IPV4_ADDRESS"
-change_setting "QUERY_LOGGING" "$QUERY_LOGGING"
-change_setting "INSTALL_WEB_SERVER" "$INSTALL_WEB_SERVER"
-change_setting "INSTALL_WEB_INTERFACE" "$INSTALL_WEB_INTERFACE"
-change_setting "LIGHTTPD_ENABLED" "$LIGHTTPD_ENABLED"
-change_setting "IPV4_ADDRESS" "$ServerIP"
-change_setting "IPV6_ADDRESS" "$ServerIPv6"
-change_setting "DNS_BOGUS_PRIV" "$DNS_BOGUS_PRIV"
-change_setting "DNS_FQDN_REQUIRED" "$DNS_FQDN_REQUIRED"
-change_setting "DNSSEC" "$DNSSEC"
-change_setting "CONDITIONAL_FORWARDING" "$CONDITIONAL_FORWARDING"
-change_setting "CONDITIONAL_FORWARDING_IP" "$CONDITIONAL_FORWARDING_IP"
-change_setting "CONDITIONAL_FORWARDING_DOMAIN" "$CONDITIONAL_FORWARDING_DOMAIN"
+change_setting "PIHOLE_INTERFACE"               "$PIHOLE_INTERFACE"
+change_setting "IPV4_ADDRESS"                   "$IPV4_ADDRESS"
+change_setting "QUERY_LOGGING"                  "$QUERY_LOGGING"
+change_setting "INSTALL_WEB_SERVER"             "$INSTALL_WEB_SERVER"
+change_setting "INSTALL_WEB_INTERFACE"          "$INSTALL_WEB_INTERFACE"
+change_setting "LIGHTTPD_ENABLED"               "$LIGHTTPD_ENABLED"
+change_setting "IPV4_ADDRESS"                   "$ServerIP"
+change_setting "IPV6_ADDRESS"                   "$ServerIPv6"
+change_setting "DNS_BOGUS_PRIV"                 "$DNS_BOGUS_PRIV"
+change_setting "DNS_FQDN_REQUIRED"              "$DNS_FQDN_REQUIRED"
+change_setting "DNSSEC"                         "$DNSSEC"
+change_setting "CONDITIONAL_FORWARDING"         "$CONDITIONAL_FORWARDING"
+change_setting "CONDITIONAL_FORWARDING_IP"      "$CONDITIONAL_FORWARDING_IP"
+change_setting "CONDITIONAL_FORWARDING_DOMAIN"  "$CONDITIONAL_FORWARDING_DOMAIN"
 change_setting "CONDITIONAL_FORWARDING_REVERSE" "$CONDITIONAL_FORWARDING_REVERSE"
 setup_web_port "$WEB_PORT"
 setup_web_password "$WEBPASSWORD"
