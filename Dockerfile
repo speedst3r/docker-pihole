@@ -10,7 +10,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG PIHOLE_SKIP_OS_CHECK=true
 
 RUN apt-get update
-RUN apt-get install --no-install-recommends -y --force-yes \
+RUN apt-get install --no-install-recommends -y \
       curl procps ca-certificates netcat-openbsd #debconf-utils
 
 # curl in armhf-buster's image has SSL issues. Running c_rehash fixes it.
