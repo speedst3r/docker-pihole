@@ -1,4 +1,10 @@
 #!/usr/bin/with-contenv bash
 
-s6-echo "Stopping pihole-FTL"
-kill -9 $(pgrep pihole-FTL)
+PID=$(pgrep pihole-FTL)
+
+if [ -n "$PID" ]; then
+  s6-echo "Stopping pihole-FTL"
+  kill -9 $PID
+else
+  s6-echo "Stopping pihole-FTL (not running)"
+fi
