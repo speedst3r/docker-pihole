@@ -49,6 +49,14 @@ echo "${PIHOLE_FTL_VERSION}" > /etc/pihole/ftlbranch
 # FIRE IN THE HOLE
 bash -ex /install.sh --unattended
 
+git_reset() {
+  pushd "$1"; git reset --hard "$2"; popd
+}
+
+# Seems installer fetches from `master` branch in each repo
+git_reset "/etc/.pihole"        "$PIHOLE_CORE_VERSION"
+git_reset "/var/www/html/admin" "$PIHOLE_WEB_VERSION"
+
 sed -i 's/readonly //g' /opt/pihole/webpage.sh
 
 # Replace the call to `updatePiholeFunc` in arg parse with new `unsupportedFunc`

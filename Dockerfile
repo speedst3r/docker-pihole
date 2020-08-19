@@ -35,7 +35,7 @@ ENV S6_LOGGING=0                        \
     PIHOLE_DNS_USER=root                \
     PATH=/opt/pihole:${PATH}
 
-RUN /Dockerfile.sh 2>&1 && \
+RUN /Dockerfile.sh && \
     rm -rf /Dockerfile.sh /var/cache/apt/archives /var/lib/apt/lists/*
 
 SHELL       ["/bin/bash", "-c"]

@@ -39,7 +39,7 @@ jobs:
             echo ::set-output name=version::${GITHUB_REF#refs/tags/}
           elif [[ $GITHUB_REF == refs/heads/master ]]; then
             echo ::set-output name=version::latest
-          elif [[ $GITHUB-REF == refs/heads/* ]]; then
+          elif [[ $GITHUB_REF == refs/heads/* ]]; then
             echo ::set-output name=version::${GITHUB_REF#refs/heads/}
           else
             echo ::set-output name=version::edge
