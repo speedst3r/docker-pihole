@@ -1,6 +1,14 @@
 FROM debian:stretch-slim
 
+# Build time environment
+ARG TARGETPLATFORM
+ARG S6_VERSION=v1.22.1.0
+ARG PIHOLE_CORE_VERSION=v5.1.2
+ARG PIHOLE_WEB_VERSION=v5.1.1
+ARG PIHOLE_FTL_VERSION=v5.2
 ARG DEBIAN_FRONTEND=noninteractive
+ARG PIHOLE_SKIP_OS_CHECK=true
+
 RUN apt-get update
 RUN apt-get install --no-install-recommends -y --force-yes \
       curl procps ca-certificates netcat-openbsd #debconf-utils
@@ -19,13 +27,6 @@ RUN touch                   /.dockerenv
 # which ought to be 0755... but when they're 0700, we see strange errors about
 # hostname lookups failing. Git only tracks the executable bit, not read/write.
 RUN chmod 755 /etc /usr /usr/bin /usr/bin/*
-
-# Build time environment
-ARG TARGETPLATFORM
-ARG S6_VERSION=v1.22.1.0
-ARG PIHOLE_CORE_VERSION=v5.1.2
-ARG PIHOLE_WEB_VERSION=v5.1.1
-ARG PIHOLE_FTL_VERSION=v5.2
 
 # Runtime container environment
 ENV S6_LOGGING=0                        \
