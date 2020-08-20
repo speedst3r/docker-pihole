@@ -38,37 +38,37 @@ sub main {
     configure_temperature ($ENV{"PIHOLE_TEMPERATURE_UNIT"});
     configure_admin_email ($ENV{"PIHOLE_ADMIN_EMAIL"});
 
-    configurePiHole("PIHOLE_DNS_1"                  , 1, \%ENV, "PIHOLE_DNS_UPSTREAM_1");
-    configurePiHole("PIHOLE_DNS_2"                  , 0, \%ENV, "PIHOLE_DNS_UPSTREAM_2");
-    configurePiHole("PIHOLE_DNS_3"                  , 0, \%ENV, "PIHOLE_DNS_UPSTREAM_3");
-    configurePiHole("PIHOLE_DNS_4"                  , 0, \%ENV, "PIHOLE_DNS_UPSTREAM_4");
-    configurePiHole("DNSMASQ_LISTENING"             , 0, \%ENV, "PIHOLE_LISTEN",            "all", "local", "iface");
-    configurePiHole("PIHOLE_INTERFACE"              , 0, \%ENV, "PIHOLE_INTERFACE");
-    configurePiHole("QUERY_LOGGING"                 , 0, \%ENV, "PIHOLE_QUERY_LOGGING",     "true", "false");
-    configurePiHole("INSTALL_WEB_SERVER"            , 0, \%ENV, "INSTALL_WEB_SERVER",       "true", "false");
-    configurePiHole("INSTALL_WEB_INTERFACE"         , 0, \%ENV, "INSTALL_WEB_INTERFACE",    "true", "false");
-    configurePiHole("LIGHTTPD_ENABLED"              , 0, \%ENV, "PIHOLE_LIGHTTPD_ENABLED",  "true", "false");
-    configurePiHole("DNS_BOGUS_PRIV"                , 0, \%ENV, "PIHOLE_DNS_BOGUS_PRIV",    "true", "false");
-    configurePiHole("DNS_FQDN_REQUIRED"             , 0, \%ENV, "PIHOLE_DNS_FQDN_REQUIRED", "true", "false");
-    configurePiHole("DNSSEC"                        , 0, \%ENV, "PIHOLE_DNS_DNSSEC",        "true", "false");
-    configurePiHole("CONDITIONAL_FORWARDING"        , 0, \%ENV, "PIHOLE_DNS_CONDITIONAL_FORWARDING", "true", "false");
-    configurePiHole("CONDITIONAL_FORWARDING_IP"     , 0, \%ENV, "PIHOLE_DNS_CONDITIONAL_FORWARDING_IP");
-    configurePiHole("CONDITIONAL_FORWARDING_DOMAIN" , 0, \%ENV, "PIHOLE_DNS_CONDITIONAL_FORWARDING_DOMAIN");
-    configurePiHole("CONDITIONAL_FORWARDING_REVERSE", 0, \%ENV, "PIHOLE_DNS_CONDITIONAL_FORWARDING_REVERSE");
-    configurePiHole("WEBUIBOXEDLAYOUT"              , 0, \%ENV, "PIHOLE_WEB_UI",            "boxed", "normal");
+    configure_pihole("PIHOLE_DNS_1"                  , 1, \%ENV, "PIHOLE_DNS_UPSTREAM_1");
+    configure_pihole("PIHOLE_DNS_2"                  , 0, \%ENV, "PIHOLE_DNS_UPSTREAM_2");
+    configure_pihole("PIHOLE_DNS_3"                  , 0, \%ENV, "PIHOLE_DNS_UPSTREAM_3");
+    configure_pihole("PIHOLE_DNS_4"                  , 0, \%ENV, "PIHOLE_DNS_UPSTREAM_4");
+    configure_pihole("DNSMASQ_LISTENING"             , 0, \%ENV, "PIHOLE_LISTEN",            "all", "local", "iface");
+    configure_pihole("PIHOLE_INTERFACE"              , 0, \%ENV, "PIHOLE_INTERFACE");
+    configure_pihole("QUERY_LOGGING"                 , 0, \%ENV, "PIHOLE_QUERY_LOGGING",     "true", "false");
+    configure_pihole("INSTALL_WEB_SERVER"            , 0, \%ENV, "INSTALL_WEB_SERVER",       "true", "false");
+    configure_pihole("INSTALL_WEB_INTERFACE"         , 0, \%ENV, "INSTALL_WEB_INTERFACE",    "true", "false");
+    configure_pihole("LIGHTTPD_ENABLED"              , 0, \%ENV, "PIHOLE_LIGHTTPD_ENABLED",  "true", "false");
+    configure_pihole("DNS_BOGUS_PRIV"                , 0, \%ENV, "PIHOLE_DNS_BOGUS_PRIV",    "true", "false");
+    configure_pihole("DNS_FQDN_REQUIRED"             , 0, \%ENV, "PIHOLE_DNS_FQDN_REQUIRED", "true", "false");
+    configure_pihole("DNSSEC"                        , 0, \%ENV, "PIHOLE_DNS_DNSSEC",        "true", "false");
+    configure_pihole("CONDITIONAL_FORWARDING"        , 0, \%ENV, "PIHOLE_DNS_CONDITIONAL_FORWARDING", "true", "false");
+    configure_pihole("CONDITIONAL_FORWARDING_IP"     , 0, \%ENV, "PIHOLE_DNS_CONDITIONAL_FORWARDING_IP");
+    configure_pihole("CONDITIONAL_FORWARDING_DOMAIN" , 0, \%ENV, "PIHOLE_DNS_CONDITIONAL_FORWARDING_DOMAIN");
+    configure_pihole("CONDITIONAL_FORWARDING_REVERSE", 0, \%ENV, "PIHOLE_DNS_CONDITIONAL_FORWARDING_REVERSE");
+    configure_pihole("WEBUIBOXEDLAYOUT"              , 0, \%ENV, "PIHOLE_WEB_UI",            "boxed", "normal");
 
     # https://docs.pi-hole.net/ftldns/configfile/
-    configureFTL("BLOCKINGMODE",      1, \%ENV, "PIHOLE_BLOCKING_MODE",        "NULL", "IP-NODATA-AAAA", "IP", "NXDOMAIN", "NODATA");
-    #onfigureFTL("PRIVACYLEVEL",      0, \%ENV, "PIHOLE_DNS_PRIVACY_LVL",      "0", "1", "2");
-    #onfigureFTL("CNAMEDEEPINSPECT",  1, \%ENV, "PIHOLE_DNS_CNAME_INSPECT",    "true", "false");
-    #onfigureFTL("IGNORE_LOCALHOST",  0, \%ENV, "PIHOLE_DNS_IGNORE_LOCALHOST", "true", "false");
-    configureFTL("SOCKET_LISTENING",  0, undef, "local",                             "local", "all");
-    configureFTL("FTLPORT",           0, undef, "4711");
-    configureFTL("RESOLVE_IPV6",      0, undef, "true",                              "true", "false");
-    configureFTL("RESOLVE_IPV4",      0, undef, "true",                              "true", "false");
-    configureFTL("DBIMPORT",          0, undef, "true",                              "true", "false");
-    configureFTL("MAXDBDAYS",         0, undef, "180");
-    configureFTL("DBINTERVAL",        0, undef, "1.0");
+    configure_ftl("BLOCKINGMODE",      1, \%ENV, "PIHOLE_BLOCKING_MODE",        "NULL", "IP-NODATA-AAAA", "IP", "NXDOMAIN", "NODATA");
+    #onfigure_ftl("PRIVACYLEVEL",      0, \%ENV, "PIHOLE_DNS_PRIVACY_LVL",      "0", "1", "2");
+    #onfigure_ftl("CNAMEDEEPINSPECT",  1, \%ENV, "PIHOLE_DNS_CNAME_INSPECT",    "true", "false");
+    #onfigure_ftl("IGNORE_LOCALHOST",  0, \%ENV, "PIHOLE_DNS_IGNORE_LOCALHOST", "true", "false");
+    configure_ftl("SOCKET_LISTENING",  0, undef, "local",                       "local", "all");
+    configure_ftl("FTLPORT",           0, undef, "4711");
+    configure_ftl("RESOLVE_IPV6",      0, undef, "true",                        "true", "false");
+    configure_ftl("RESOLVE_IPV4",      0, undef, "true",                        "true", "false");
+    configure_ftl("DBIMPORT",          0, undef, "true",                        "true", "false");
+    configure_ftl("MAXDBDAYS",         0, undef, "180");
+    configure_ftl("DBINTERVAL",        0, undef, "1.0");
 
     # https://github.com/pi-hole/pi-hole/blob/e9b039139c468798fb6d9457e4c9012171faee33/advanced/Scripts/webpage.sh#L146
     #
@@ -200,9 +200,12 @@ sub configure_network (\%) {
         my ($ip) = $output =~ m/src\s+([^\s]+)/;
 
         $env->{"PIHOLE_IPV4_ADDRESS"} = $ip;
-        configurePiHole("IPV4_ADDRESS", 1, $env, "PIHOLE_IPV4_ADDRESS");
     }
 
+    validate_ip("PIHOLE_IPV4_ADDRESS", $env->{"PIHOLE_IPV4_ADDRESS"});
+    configure_pihole("IPV4_ADDRESS", 1, $env, "PIHOLE_IPV4_ADDRESS");
+
+    # TODO
     if (!exists($env->{"PIHOLE_IPV6_ADDRESS"})) {
         #xplain("ip route get 2606:4700:4700::1001")
         return
@@ -233,6 +236,9 @@ sub configure_network (\%) {
         Dumper[@ula];
         Dumper[@ll];
     }
+
+    # validate_ip("PIHOLE_IPV6_ADDRESS", $env->{"PIHOLE_IPV6_ADDRESS"});
+    # configure_pihole("IPV6_ADDRESS", 1, $env, "PIHOLE_IPV6_ADDRESS");
 }
 
 sub mask ($$$) {
@@ -240,17 +246,11 @@ sub mask ($$$) {
     return ((1 << $bits) - 1) << ($size - $bits);
 }
 
-sub validate_network {
-    my ($ipv4, $ipv6) = @_;
+sub validate_ip ($$) {
+    my ($key, $ip) = @_;
 
-    if ($ipv4) {
-        `ip route get "$ipv4" 2>/dev/null`;
-        croak "PIHOLE_IPV4_ADDRESS ($ipv4) is invalid" unless ($? == 0);
-    }
-
-    if ($ipv6) {
-        `ip route get "$ipv6" 2>/dev/null`;
-        croak "PIHOLE_IPV6_ADDRESS ($ipv4) is invalid" unless ($? == 0);
+    if ($ip and system("ip route get '".$ip."' 2>/dev/null")) {
+        croak "$key ($ip) is invalid" unless ($? == 0);
     }
 }
 
@@ -431,11 +431,11 @@ sub yesno($) {
 }
 
 # Change an option in setupVars.conf
-sub configurePiHole ($$\%$@) {
+sub configure_pihole ($$\%$@) {
     return configure($PIHOLE_CONF, @_);
 }
 
-sub configureFTL ($$\%$@) {
+sub configure_ftl ($$\%$@) {
     return configure($FTL_CONF, @_);
 }
 

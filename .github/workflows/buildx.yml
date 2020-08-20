@@ -1,14 +1,18 @@
-name: build docker image
+name: buildx
 
 on:
   push:
+#   branches: [master]
+# release:
+#   types: [created]
+# page_build:
 # pull_request:
+#   branches: [master]
 # workflow_dispatch:
 
 jobs:
 # env:
 #   EXAMPLE: 1
-
   docker:
     runs-on: ubuntu-latest
     steps:
@@ -44,6 +48,12 @@ jobs:
           else
             echo ::set-output name=version::edge
           fi
+
+          # if [[ "${{ github.event_name }}" == "pull_requeest" ]]; then
+          # #
+          # else
+          # #
+          # fi
 
           echo ::set-output name=docker_platforms::linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64
           echo ::set-output name=docker_image::${DOCKERHUB_USERNAME}/pihole
