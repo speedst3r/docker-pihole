@@ -2,8 +2,10 @@
 use 5.010;
 use strict;
 use warnings;
-use Data::Dumper;
+no warnings "experimental";
+
 use Carp qw(carp croak);
+use Data::Dumper;
 use File::Find;
 
 my $PIHOLE_CONF  = "/etc/pihole/setupVars.conf";
@@ -173,8 +175,8 @@ sub set_defaults (\%) {
     $env->{"PIHOLE_DNS_FQDN_REQUIRED"          } //= "false";
     $env->{"PIHOLE_DNS_DNSSEC"                 } //= "false";
     $env->{"PIHOLE_DNS_CONDITIONAL_FORWARDING" } //= "false";
-    $env->{"PIHOLE_WEB_PORT"                   } //= "80";
     $env->{"PIHOLE_WEB_HOSTNAME"               } //= trim(`hostname -f 2>/dev/null || hostname`);
+    $env->{"PIHOLE_WEB_PORT",                  } //= "80";
     $env->{"PIHOLE_WEB_UI"                     } //= "boxed";
     $env->{"INSTALL_WEB_SERVER"                } //= "true";
     $env->{"INSTALL_WEB_INTERFACE"             } //= "true";
@@ -257,23 +259,20 @@ sub validate_ip ($$) {
 sub configure_web_address ($$$) {
     my ($ipv4, $ipv6, $port) = @_;
     my $path = "/etc/lighttpd/lighttpd.conf";
-    my $conf = read_file($path); # TODO
+    my @conf = read_file($path);
 
-    if ($port) {
-        croak "PIHOLE_WEB_PORT $port is invalid, must be 1-65535"
-            unless ($port =~ /^\d+$/ and $port > 0 and $port <= 65535);
-        $conf =~ s/server.port\s*=.*$/server.port = $port/ms
-    }
+    croak "PIHOLE_WEB_PORT $port is invalid, must be 1-65535"
+        unless ($port =~ /^\d+$/ and $port > 0 and $port <= 65535);
+    @conf = sed {/^server.port\s=/} "server.port = $port", @conf;
 
     my @bind = ('server.bind = "127.0.0.1"');
     push @bind, sprintf('$SERVER["socket"] == "%s:%s" { }', $ipv4, $port) if ($ipv4);
     push @bind, sprintf('$SERVER["socket"] == "%s:%s" { }', $ipv6, $port) if ($ipv6);
-    my $bind = join("\n", @bind);
 
-    $conf =~ s/^\s*\$SERVER\["socket".*$//msg;
-    $conf =~ s/server.bind\s*=.+$/server.bind = "127.0.0.1"/msg;
+    @conf = grep {!/^\s*\$SERVER\["socket"/} @conf;
+    @conf = sed {/^server\.bind\s*=/} \@bind, @conf;
 
-    write_file($path, $conf);
+    write_file($path, @conf);
 }
 
 sub configure_web_password ($$) {
@@ -339,7 +338,7 @@ sub configure_dns_user ($) {
     configure("/etc/dnsmasq.conf", "user", 1, {PIHOLE_DNS_USER => $dns_user}, "PIHOLE_DNS_USER");
 
     find(sub {
-        write_file($_, grep(!/^user=/, read_file($_))) if -f;
+        write_file($_, grep {!/^user=/} read_file($_)) if -f;
     }, "/etc/dnsmasq.d");
 }
 
@@ -347,8 +346,8 @@ sub configure_dns_interface ($$) {
     my ($iface, $listen) = @_;
 
     my @cfg = read_file($DNSMASQ_CONF);
-    @cfg = grep(!/^(#|\s*$)/, @cfg);
-    @cfg = grep(!/^interface=/, @cfg);
+    #cfg = grep {!/^(#|\s*$)/}   @cfg;
+    @cfg = grep {!/^interface=/} @cfg;
 
     # TODO
 
@@ -361,8 +360,8 @@ sub configure_dns_hostname ($$@) {
     my @names = @_;
 
     my @cfg = read_file($DNSMASQ_CONF);
-    @cfg = grep(!/^(#|\s*$)/, @cfg);
-    @cfg = grep(!/^server=/, @cfg);
+    #cfg = grep {!/^(#|\s*$)/} @cfg;
+    @cfg = grep {!/^server=/}  @cfg;
 
     # TODO
 
@@ -420,7 +419,7 @@ sub check_configuration ($) {
 
 sub trim ($) {
     my ($str) = @_;
-    $str =~ s/^\s+|\s+$//g if (defined $str);
+    $str =~ s/\A\s+|\s+\z//g if (defined $str);
     return $str;
 }
 
@@ -453,7 +452,7 @@ sub configure ($$$\%$@) {
         $lbl = $key;
     }
 
-    my @cfg = grep(!/^$key=/, read_file($path));
+    my @cfg = grep {!/^$key=/} read_file($path);
     push @cfg, "$key=" . ($val // "");
     chomp @cfg;
 
@@ -506,7 +505,32 @@ sub write_file ($@) {
     my $path = shift;
     open(my $io, ">", $path) or croak "can't open $path for writing: $!";
     print $io join("\n", @_);
+    print $io "\n" unless ($_[-1] =~ m/\n\z/);
     close $io;
+}
+
+sub sed (&$@) {
+    my $test = shift;
+    my $swap = shift;
+    my @result;
+    my $swappd;
+
+    foreach $_ (@_) {
+        if (&$test) {
+            $swappd = (ref $swap == "CODE") ? &$swap : $swap;
+
+            given (ref $swappd) {
+                when ("")       { push @result, $swappd;  }
+                when ("ARRAY")  { push @result, @$swappd; }
+                when ("SCALAR") { push @result, $$swappd; }
+                default         { croak "wrong type"; }
+            }
+        } else {
+            push @result, $_;
+        }
+    }
+
+    return @result;
 }
 
 ###############################################################################
