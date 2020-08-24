@@ -17,7 +17,6 @@ RUN apt-get install --no-install-recommends -y \
 # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=923479
 RUN c_rehash
 
-COPY root/startup.pl        /
 COPY Dockerfile.sh          /
 COPY root/s6/service        /usr/local/bin/service
 COPY root/s6/debian-root    /
