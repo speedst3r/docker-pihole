@@ -68,6 +68,7 @@ sub configure_blocklists ();
 sub configure_dns_defaults;
 sub configure_dns_hostname ($$@);
 sub configure_dns_interface ($$);
+sub configure_dns_upstream ($@);
 sub configure_dns_user ($);
 sub configure_ftl ($$$@);
 sub configure_network (\%$$);
@@ -136,9 +137,6 @@ sub configure_dns_hostname ($$@) {
     my @names = @_;
 
     my @cfg = read_file($DNSMASQ_CONF);
-    #cfg = grep {!/^(#|\s*$)/} @cfg;
-    @cfg = grep {!/^server=/}  @cfg;
-
     # TODO
 
     write_file($DNSMASQ_CONF, @cfg);
@@ -147,12 +145,28 @@ sub configure_dns_hostname ($$@) {
 sub configure_dns_interface ($$) {
     my ($iface, $listen) = @_;
 
-    my @cfg = read_file($DNSMASQ_CONF);
-    #cfg = grep {!/^(#|\s*$)/}   @cfg;
-    @cfg = grep {!/^interface=/} @cfg;
+    my @cfg = grep {!/^interface=/} read_file($DNSMASQ_CONF);
+    push @cfg, "interface=".$iface->val() if $iface->is_defined();
 
-    # TODO
+    write_file($DNSMASQ_CONF, @cfg);
+}
 
+sub configure_dns_upstream ($@) {
+    my @cfg   = grep {!/^server=/} read_file($DNSMASQ_CONF);
+    my $count = 0;
+
+    foreach $_ (@_) {
+        next unless $_->is_defined();
+
+        # Need to remove optional port number
+        # validate_ip($_);
+
+        configure_pihole("PIHOLE_DNS_".(++$count), 0, $_->val());
+        push @cfg, "server=".$_->val();
+        $count ++;
+    }
+
+    validate("PIHOLE_DNS_1", 1, $_[0]) if ($count == 1);
     write_file($DNSMASQ_CONF, @cfg);
 }
 
@@ -328,63 +342,45 @@ sub fix_capabilities ($) {
 }
 
 sub fix_permissions ($) {
-    my ($dns_user) = @_;
-
-    # Re-apply perms from basic-install over any volume mounts that may be present (or not)
-    do_or_die("mkdir", "-p",
-      "/etc/pihole",
-      "/var/run/pihole",
-      "/var/log/pihole",
-      "/var/log/lighttpd");
-    do_or_die("chown", "www-data:root",
-      "/etc/lighttpd",
-      "/var/log/lighttpd");
-    do_or_die("chown", "pihole:root",
-      "/etc/pihole",
-      "/var/run/pihole",
-      "/var/log/pihole");
-    do_or_die("chmod", "0755",
-      "/etc/pihole",
-      "/etc/lighttpd",
-      "/var/run",
-      "/var/log");
-
-    do_or_die("touch",
-      "/etc/pihole/setupVars.conf",
-      "/var/log/lighttpd/access.log",
-      "/var/log/lighttpd/error.log");
-    do_or_die("chown", "www-data:root",
-      "/var/log/lighttpd/access.log",
-      "/var/log/lighttpd/error.log");
+    my $dns = $_[0]->val();
+    my $www = "www-data";
 
     my @files = (
-      "/etc/pihole/custom.list",
-      "/etc/pihole/dhcp.leases",
-      "/etc/pihole/pihole-FTL.conf",
-      "/etc/pihole/regex.list",
-      "/etc/pihole/setupVars.conf",
-      "/var/log/pihole",
-      "/var/log/pihole-FTL.log",
-      "/var/log/pihole.log",
-      "/var/run/pihole-FTL.pid",
-      "/var/run/pihole-FTL.port");
+        {type=>"d", path=>"/etc/lighttpd",                uid=>"root", gid=>"root", mode=>"0755"},
+        {type=>"d", path=>"/etc/pihole",                  uid=>$dns,   gid=>"root", mode=>"0755"}, # TODO
+        {type=>"d", path=>"/var/cache/lighttpd/compress", uid=>$www,   gid=>"root", mode=>"0755"},
+        {type=>"d", path=>"/var/cache/lighttpd/uploads",  uid=>$www,   gid=>"root", mode=>"0755"},
+        {type=>"d", path=>"/var/log",                     uid=>"root", gid=>"root", mode=>"0755"},
+        {type=>"d", path=>"/var/log/lighttpd",            uid=>$www,   gid=>"root", mode=>"0755"},
+        {type=>"d", path=>"/var/log/pihole",              uid=>$dns,   gid=>"root", mode=>"0755"},
+        {type=>"d", path=>"/run/lighttpd",                uid=>$www,   gid=>"root", mode=>"0755"},
+        {type=>"d", path=>"/run/pihole",                  uid=>$dns,   gid=>"root", mode=>"0755"},
+        {type=>"f", path=>"/etc/pihole/custom.list",      uid=>$dns,   gid=>"root", mode=>"0644"},
+        {type=>"f", path=>"/etc/pihole/dhcp.leases",      uid=>$dns,   gid=>"root", mode=>"0644"},
+        {type=>"f", path=>"/etc/pihole/dns-servers.conf", uid=>$dns,   gid=>"root", mode=>"0644"},
+        {type=>"f", path=>"/etc/pihole/pihole-FTL.conf",  uid=>$dns,   gid=>"root", mode=>"0644"},
+        {type=>"f", path=>"/etc/pihole/regex.list",       uid=>$dns,   gid=>"root", mode=>"0644"},
+        {type=>"f", path=>"/etc/pihole/setupVars.conf",   uid=>$dns,   gid=>"root", mode=>"0644"},
+        {type=>"f", path=>"/var/log/pihole.log",          uid=>$dns,   gid=>"root", mode=>"0644"},
+        {type=>"f", path=>"/var/log/lighttpd/access.log", uid=>$www,   gid=>"root", mode=>"0644"},
+        {type=>"f", path=>"/var/log/lighttpd/error.log",  uid=>$www,   gid=>"root", mode=>"0644"},
+        {type=>"f", path=>"/run/pihole-FTL.pid",          uid=>$dns,   gid=>"root", mode=>"0644"},
+        {type=>"f", path=>"/run/pihole-FTL.port",         uid=>$dns,   gid=>"root", mode=>"0644"}
+    );
 
-    do_or_die("touch", @files);
-    do_or_die("chown", $dns_user->val().":root", @files);
-    do_or_die("chmod", "0644",
-      "/etc/pihole/pihole-FTL.conf",
-      "/etc/pihole/regex.list",
-      "/run/pihole-FTL.pid",
-      "/run/pihole-FTL.port",
-      "/var/log/pihole-FTL.log",
-      "/var/log/pihole.log");
+    do_or_die("mkdir", "-p",   map $_->{path}, grep { $_->{type} eq "d"     } @files);
+    do_or_die("touch",         map $_->{path}, grep { $_->{type} eq "f"     } @files);
+    do_or_die("chown", $dns,   map $_->{path}, grep { $_->{uid} eq $dns     } @files);
+    do_or_die("chown", $www,   map $_->{path}, grep { $_->{uid} eq $www     } @files);
+    do_or_die("chown", "root", map $_->{path}, grep { $_->{uid} eq "root"   } @files);
+    do_or_die("chgrp", $dns,   map $_->{path}, grep { $_->{gid} eq $dns     } @files);
+    do_or_die("chgrp", $www,   map $_->{path}, grep { $_->{gid} eq $www     } @files);
+    do_or_die("chown", "root", map $_->{path}, grep { $_->{gid} eq "root"   } @files);
+    do_or_die("chmod", "0755", map $_->{path}, grep { $_->{mode} eq "0755"  } @files);
+    do_or_die("chmod", "0644", map $_->{path}, grep { $_->{mode} eq "0644"  } @files);
 
-    do_or_die("rm", "-f",
-      "/var/run/pihole/FTL.sock");
-
-    do_or_die("cp", "-f",
-        "/etc/pihole/setupVars.conf",
-        "/etc/pihole/setupVars.conf.bak");
+    do_or_die("rm", "-f", "/var/run/pihole/FTL.sock");
+    do_or_die("cp", "-f", "/etc/pihole/setupVars.conf", "/etc/pihole/setupVars.conf.bak");
 }
 
 sub mask ($$) {
@@ -547,15 +543,16 @@ sub main {
     configure_dns_defaults();
     configure_dns_interface(env("PIHOLE_LISTEN"), env("PIHOLE_INTERFACE"));
     configure_dns_user(env("PIHOLE_DNS_USER"));
+    configure_dns_upstream(
+        env("PIHOLE_DNS_UPSTREAM_1"),
+        env("PIHOLE_DNS_UPSTREAM_2"),
+        env("PIHOLE_DNS_UPSTREAM_3"),
+        env("PIHOLE_DNS_UPSTREAM_4"));
     configure_dns_hostname(env("PIHOLE_IPV4_ADDRESS"), env("PIHOLE_IPV6_ADDRESS"), env("PIHOLE_WEB_HOSTNAME"));
 
     configure_temperature(env("PIHOLE_TEMPERATURE_UNIT"));
     configure_admin_email(env("PIHOLE_ADMIN_EMAIL"));
 
-    configure_pihole("PIHOLE_DNS_1"                  , 1, env("PIHOLE_DNS_UPSTREAM_1"));
-    configure_pihole("PIHOLE_DNS_2"                  , 0, env("PIHOLE_DNS_UPSTREAM_2"));
-    configure_pihole("PIHOLE_DNS_3"                  , 0, env("PIHOLE_DNS_UPSTREAM_3"));
-    configure_pihole("PIHOLE_DNS_4"                  , 0, env("PIHOLE_DNS_UPSTREAM_4"));
     configure_pihole("DNSMASQ_LISTENING"             , 0, env("PIHOLE_LISTEN"),            "all", "local", "iface");
     configure_pihole("PIHOLE_INTERFACE"              , 0, env("PIHOLE_INTERFACE"));
     configure_pihole("QUERY_LOGGING"                 , 0, env("PIHOLE_QUERY_LOGGING"),     "true", "false");
