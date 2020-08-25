@@ -105,11 +105,11 @@ sub configure ($$$$@) {
 
     validate($name, $reqd, $cvar, @allow);
 
-    my @cfg = grep {!/^$name=/} read_file($path);
-    push @cfg, "$name=" . ($cvar->val() // "");
-    chomp @cfg;
+    my @conf = grep {!/^$name=/} read_file($path);
+    push @conf, "$name=" . ($cvar->val() // "");
+    chomp @conf;
 
-    write_file($path, join("\n", @cfg)."\n");
+    write_file($path, join("\n", @conf)."\n");
     rename($PIHOLE_CONF.".new", $PIHOLE_CONF);
 }
 
@@ -128,7 +128,7 @@ sub configure_blocklists () {
 }
 
 sub configure_dns_defaults {
-    do_or_die("cp", "/etc/.pihole/advanced/01-pihole.conf", $DNSMASQ_CONF) if !-f $DNSMASQ_CONF;
+    do_or_die("cp", "-f", "/etc/.pihole/advanced/01-pihole.conf", $DNSMASQ_CONF);
 }
 
 sub configure_dns_hostname ($$@) {
@@ -136,23 +136,23 @@ sub configure_dns_hostname ($$@) {
     my $ipv6 = shift;
     my @names = @_;
 
-    my @cfg = read_file($DNSMASQ_CONF);
+    my @conf = read_file($DNSMASQ_CONF);
     # TODO
 
-    write_file($DNSMASQ_CONF, @cfg);
+    write_file($DNSMASQ_CONF, @conf);
 }
 
 sub configure_dns_interface ($$) {
     my ($iface, $listen) = @_;
 
-    my @cfg = grep {!/^interface=/} read_file($DNSMASQ_CONF);
-    push @cfg, "interface=".$iface->val() if $iface->is_defined();
+    my @conf = grep {!/^interface=/} read_file($DNSMASQ_CONF);
+    push @conf, "interface=".$iface->val() if $iface->is_defined();
 
-    write_file($DNSMASQ_CONF, @cfg);
+    write_file($DNSMASQ_CONF, @conf);
 }
 
 sub configure_dns_upstream ($@) {
-    my @cfg   = grep {!/^server=/} read_file($DNSMASQ_CONF);
+    my @conf  = grep {!/^server=/} read_file($DNSMASQ_CONF);
     my $count = 0;
 
     foreach $_ (@_) {
@@ -162,12 +162,12 @@ sub configure_dns_upstream ($@) {
         # validate_ip($_);
 
         configure_pihole("PIHOLE_DNS_".(++$count), 0, $_->val());
-        push @cfg, "server=".$_->val();
+        push @conf, "server=".$_->val();
         $count ++;
     }
 
     validate("PIHOLE_DNS_1", 1, $_[0]) if ($count == 1);
-    write_file($DNSMASQ_CONF, @cfg);
+    write_file($DNSMASQ_CONF, @conf);
 }
 
 sub configure_dns_user ($) {
@@ -256,16 +256,18 @@ sub configure_web_address ($$$) {
 
     croak sprintf("%s (%s) is invalid, must be 1-65535", $port->name(), $port->val())
         unless ($port->val() =~ /^\d+$/ and $port->val() > 0 and $port->val() <= 65535);
-    @conf = sed {/^server.port\s*=/} "server.port = ".$port->val(), @conf;
+
+    @conf = grep {!/^server.port\s*=/} @conf;
+    push @conf, "server.port = ".$port->val();
 
     my @bind = ('server.bind = "127.0.0.1"');
     push @bind, sprintf('$SERVER["socket"] == "%s:%s" { }', $ipv4->val(), $port->val()) if $ipv4->is_defined();
     push @bind, sprintf('$SERVER["socket"] == "%s:%s" { }', $ipv6->val(), $port->val()) if $ipv6->is_defined();
 
-    # TODO: disable use-ipv6.pl because it binds to ::
-    # TODO: need to add if replace doesn't match
-    @conf = grep {!/^\s*\$SERVER\["socket"/} @conf;
-    @conf = sed {/^server\.bind\s*=/} \@bind, @conf;
+    @conf = grep {!/^\$SERVER\["socket"/} @conf;
+    @conf = grep {!/^server\.bind/} @conf;
+    @conf = grep {!/use-ipv6\.pl/} @conf;
+    push @conf, @bind;
 
     write_file($path, @conf);
 }
