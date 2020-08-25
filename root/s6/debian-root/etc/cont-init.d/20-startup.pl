@@ -275,24 +275,21 @@ sub configure_web_address ($$$) {
 sub configure_web_fastcgi ($$) {
     my ($ipv4, $host) = @_;
     my $path = "/etc/lighttpd/conf-enabled/15-fastcgi-php.conf";
-    my $conf = read_file($path);
+    my @conf = read_file($path);
 
-    $conf =~ s/^\s*"VIRTUAL_HOST".*$//ms;
-    $conf =~ s/^\s*"ServerIP".*$//ms;
-    $conf =~ s/^\s*"PHP_ERROR_LOG".*$//ms;
+    @conf = grep {!/^\s*"PHP_ERROR_LOG"/ } @conf;
+    @conf = grep {!/^\s*"VIRTUAL_HOST"/ } @conf;
+    @conf = grep {!/^\s*"ServerIP"/ } @conf;
 
-    my $env;
-    do {
-        my @x = (sprintf('"VIRTUAL_HOST"  => "%s"', $host->val()));
-        push(@x, sprintf('"ServerIP"      => "%s"', $ipv4->val())) if $ipv4->is_defined();
-        push(@x, sprintf('"PHP_ERROR_LOG" => "%s"', "/var/log/lighttpd/error.log"));
-        $env = join(",\n\t\t\t", @x);
-    };
+    my @env;
+    push @env, "\t\t\"bin-environment\" => (";
+    push @env, sprintf('"VIRTUAL_HOST"  => "%s"', $host->val());
+    push @env, sprintf('"ServerIP"      => "%s"', $ipv4->val()) if $ipv4->is_defined();
+    push @env, sprintf('"PHP_ERROR_LOG" => "%s"', "/var/log/lighttpd/error.log");
 
-    # TODO: sed
-    $conf =~ s/^(\s*"bin-environment".*)$/$1\n\t\t\t$env,/m;
+    @conf = sed {/"bin-environment"/} \@env, @conf;
 
-    write_file($path, $conf);
+    write_file($path, @conf);
 }
 
 sub configure_web_password ($$) {
@@ -370,16 +367,17 @@ sub fix_permissions ($) {
         {type=>"f", path=>"/run/pihole-FTL.port",         uid=>$dns,   gid=>"root", mode=>"0644"}
     );
 
-    do_or_die("mkdir", "-p",   map $_->{path}, grep { $_->{type} eq "d"     } @files);
-    do_or_die("touch",         map $_->{path}, grep { $_->{type} eq "f"     } @files);
-    do_or_die("chown", $dns,   map $_->{path}, grep { $_->{uid} eq $dns     } @files);
-    do_or_die("chown", $www,   map $_->{path}, grep { $_->{uid} eq $www     } @files);
-    do_or_die("chown", "root", map $_->{path}, grep { $_->{uid} eq "root"   } @files);
-    do_or_die("chgrp", $dns,   map $_->{path}, grep { $_->{gid} eq $dns     } @files);
-    do_or_die("chgrp", $www,   map $_->{path}, grep { $_->{gid} eq $www     } @files);
-    do_or_die("chown", "root", map $_->{path}, grep { $_->{gid} eq "root"   } @files);
-    do_or_die("chmod", "0755", map $_->{path}, grep { $_->{mode} eq "0755"  } @files);
-    do_or_die("chmod", "0644", map $_->{path}, grep { $_->{mode} eq "0644"  } @files);
+    my @_files;
+    do_or_die("mkdir", "-p",   @_files) if @_files = map $_->{path}, grep { $_->{type} eq "d"     } @files;
+    do_or_die("touch",         @_files) if @_files = map $_->{path}, grep { $_->{type} eq "f"     } @files;
+    do_or_die("chown", $dns,   @_files) if @_files = map $_->{path}, grep { $_->{uid} eq $dns     } @files;
+    do_or_die("chown", $www,   @_files) if @_files = map $_->{path}, grep { $_->{uid} eq $www     } @files;
+    do_or_die("chown", "root", @_files) if @_files = map $_->{path}, grep { $_->{uid} eq "root"   } @files;
+    do_or_die("chgrp", $dns,   @_files) if @_files = map $_->{path}, grep { $_->{gid} eq $dns     } @files;
+    do_or_die("chgrp", $www,   @_files) if @_files = map $_->{path}, grep { $_->{gid} eq $www     } @files;
+    do_or_die("chown", "root", @_files) if @_files = map $_->{path}, grep { $_->{gid} eq "root"   } @files;
+    do_or_die("chmod", "0755", @_files) if @_files = map $_->{path}, grep { $_->{mode} eq "0755"  } @files;
+    do_or_die("chmod", "0644", @_files) if @_files = map $_->{path}, grep { $_->{mode} eq "0644"  } @files;
 
     do_or_die("rm", "-f", "/var/run/pihole/FTL.sock");
     do_or_die("cp", "-f", "/etc/pihole/setupVars.conf", "/etc/pihole/setupVars.conf.bak");
