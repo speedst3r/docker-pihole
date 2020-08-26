@@ -161,7 +161,7 @@ sub configure_dns_upstream ($@) {
         # Need to remove optional port number
         # validate_ip($_);
 
-        configure_pihole("PIHOLE_DNS_".(++$count), 0, $_->val());
+        configure_pihole("PIHOLE_DNS_".(++$count), 0, $_);
         push @conf, "server=".$_->val();
         $count ++;
     }
