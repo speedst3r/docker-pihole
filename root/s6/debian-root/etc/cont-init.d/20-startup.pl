@@ -393,9 +393,9 @@ sub fix_permissions ($) {
         }
     }
 
-    do_or_die("rm", "-rf",   @{$grouped{rm}})    if @{$grouped{rm}};
-    do_or_die("touch",       @{$grouped{touch}}) if @{$grouped{touch}};
     do_or_die("mkdir", "-p", @{$grouped{mkdir}}) if @{$grouped{mkdir}};
+    do_or_die("touch",       @{$grouped{touch}}) if @{$grouped{touch}};
+    do_or_die("rm", "-rf",   @{$grouped{rm}})    if @{$grouped{rm}};
 
     foreach $_ (keys %{$grouped{uid }}) { do_or_die("chown", $_, @{$grouped{uid }{$_}}); }
     foreach $_ (keys %{$grouped{gid }}) { do_or_die("chgrp", $_, @{$grouped{gid }{$_}}); }
