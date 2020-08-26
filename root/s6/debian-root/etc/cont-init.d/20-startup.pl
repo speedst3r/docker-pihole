@@ -189,7 +189,7 @@ sub configure_network (\%$$) {
     my ($env, $ipv4, $ipv6) = @_;
     my %env = %{$env};
 
-    if (!defined $ipv4) {
+    if (!defined $ipv4 or !$ipv4->val() or $ipv4->val() eq "auto") {
         explain("ip route get 1.1.1.1")
             unless (my $output = `ip route get 1.1.1.1`);
 
@@ -204,7 +204,7 @@ sub configure_network (\%$$) {
     configure_pihole("IPV4_ADDRESS", 1, env("PIHOLE_IPV4_ADDRESS"));
 
     # TODO
-    if (!defined $ipv6) {
+    if ($ipv6->is_defined() and $ipv6->val() eq "auto") {
         my $output = `ip route get 2606:4700:4700::1001 2>/dev/null`
             or return;
 
@@ -261,8 +261,8 @@ sub configure_web_address ($$$) {
     push @conf, "server.port = ".$port->val();
 
     my @bind = ('server.bind = "127.0.0.1"');
-    push @bind, sprintf('$SERVER["socket"] == "%s:%s" { }', $ipv4->val(), $port->val()) if $ipv4->is_defined();
-    push @bind, sprintf('$SERVER["socket"] == "%s:%s" { }', $ipv6->val(), $port->val()) if $ipv6->is_defined();
+    push @bind, sprintf('$SERVER["socket"] == "%s:%s" { }', $ipv4->val(), $port->val()) if $ipv4->is_defined() and $ipv4->val();
+    push @bind, sprintf('$SERVER["socket"] == "%s:%s" { }', $ipv6->val(), $port->val()) if $ipv6->is_defined() and $ipv6->val();
 
     @conf = grep {!/^\$SERVER\["socket"/} @conf;
     @conf = grep {!/^server\.bind/} @conf;
@@ -283,9 +283,9 @@ sub configure_web_fastcgi ($$) {
 
     my @env;
     push @env, "\t\t\"bin-environment\" => (";
-    push @env, sprintf('"VIRTUAL_HOST"  => "%s"', $host->val());
-    push @env, sprintf('"ServerIP"      => "%s"', $ipv4->val()) if $ipv4->is_defined();
-    push @env, sprintf('"PHP_ERROR_LOG" => "%s"', "/var/log/lighttpd/error.log");
+    push @env, sprintf('%s"VIRTUAL_HOST"  => "%s",', "\t\t\t", $host->val());
+    push @env, sprintf('%s"ServerIP"      => "%s",', "\t\t\t", $ipv4->val()) if $ipv4->is_defined();
+    push @env, sprintf('%s"PHP_ERROR_LOG" => "%s",', "\t\t\t", "/var/log/lighttpd/error.log");
 
     @conf = sed {/"bin-environment"/} \@env, @conf;
 
