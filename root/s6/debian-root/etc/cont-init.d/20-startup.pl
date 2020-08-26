@@ -322,7 +322,7 @@ sub configure_whitelists () {
 }
 
 sub do_or_die (@) {
-    explain(@_) if system(@_);
+    system(@_) ? explain(@_) : say "+ ".join(" ", @_);
 }
 
 # Explain how a call to system() failed, then abort
@@ -365,22 +365,42 @@ sub fix_permissions ($) {
         {type=>"f", path=>"/var/log/lighttpd/access.log", uid=>$www,   gid=>"root", mode=>"0644"},
         {type=>"f", path=>"/var/log/lighttpd/error.log",  uid=>$www,   gid=>"root", mode=>"0644"},
         {type=>"f", path=>"/run/pihole-FTL.pid",          uid=>$dns,   gid=>"root", mode=>"0644"},
-        {type=>"f", path=>"/run/pihole-FTL.port",         uid=>$dns,   gid=>"root", mode=>"0644"}
+        {type=>"f", path=>"/run/pihole-FTL.port",         uid=>$dns,   gid=>"root", mode=>"0644"},
+        {type=>"x", path=>"/run/pihole/FTL.sock"}
     );
 
-    my @_files;
-    do_or_die("mkdir", "-p",   @_files) if @_files = map $_->{path}, grep { $_->{type} eq "d"     } @files;
-    do_or_die("touch",         @_files) if @_files = map $_->{path}, grep { $_->{type} eq "f"     } @files;
-    do_or_die("chown", $dns,   @_files) if @_files = map $_->{path}, grep { $_->{uid} eq $dns     } @files;
-    do_or_die("chown", $www,   @_files) if @_files = map $_->{path}, grep { $_->{uid} eq $www     } @files;
-    do_or_die("chown", "root", @_files) if @_files = map $_->{path}, grep { $_->{uid} eq "root"   } @files;
-    do_or_die("chgrp", $dns,   @_files) if @_files = map $_->{path}, grep { $_->{gid} eq $dns     } @files;
-    do_or_die("chgrp", $www,   @_files) if @_files = map $_->{path}, grep { $_->{gid} eq $www     } @files;
-    do_or_die("chown", "root", @_files) if @_files = map $_->{path}, grep { $_->{gid} eq "root"   } @files;
-    do_or_die("chmod", "0755", @_files) if @_files = map $_->{path}, grep { $_->{mode} eq "0755"  } @files;
-    do_or_die("chmod", "0644", @_files) if @_files = map $_->{path}, grep { $_->{mode} eq "0644"  } @files;
+    my %grouped = (
+        touch => [],
+        mkdir => [],
+        rm    => [],
+        uid   => {},
+        gid   => {},
+        mode  => {});
 
-    do_or_die("rm", "-f", "/var/run/pihole/FTL.sock");
+    foreach (@files) {
+        push(@{$grouped{touch}}, $_->{path}) if ($_->{type} eq "f");
+        push(@{$grouped{mkdir}}, $_->{path}) if ($_->{type} eq "d");
+        push(@{$grouped{rm}},    $_->{path}) if ($_->{type} eq "x");
+
+        if ($_->{type} ne "x") {
+            $grouped{uid }{$_->{uid }} = () if !defined $grouped{uid }{$_->{uid }};
+            $grouped{gid }{$_->{gid }} = () if !defined $grouped{gid }{$_->{gid }};
+            $grouped{mode}{$_->{mode}} = () if !defined $grouped{mode}{$_->{mode}};
+
+            push(@{$grouped{uid }{$_->{uid }}}, $_->{path});
+            push(@{$grouped{gid }{$_->{gid }}}, $_->{path});
+            push(@{$grouped{mode}{$_->{mode}}}, $_->{path});
+        }
+    }
+
+    do_or_die("rm", "-rf",   @{$grouped{rm}})    if @{$grouped{rm}};
+    do_or_die("touch",       @{$grouped{touch}}) if @{$grouped{touch}};
+    do_or_die("mkdir", "-p", @{$grouped{mkdir}}) if @{$grouped{mkdir}};
+
+    foreach $_ (keys %{$grouped{uid }}) { do_or_die("chown", $_, @{$grouped{uid }{$_}}); }
+    foreach $_ (keys %{$grouped{gid }}) { do_or_die("chgrp", $_, @{$grouped{gid }{$_}}); }
+    foreach $_ (keys %{$grouped{mode}}) { do_or_die("chmod", $_, @{$grouped{mode}{$_}}); }
+
     do_or_die("cp", "-f", "/etc/pihole/setupVars.conf", "/etc/pihole/setupVars.conf.bak");
 }
 
@@ -480,7 +500,7 @@ sub test_configuration ($) {
         local *STDOUT;
         my $output;
         open STDOUT, ">>", \$output;
-        do_or_die("sudo", "-u", $dns_user->val(), "-E", "/usr/bin/pihole-FTL", "test");
+        do_or_die("sudo", "-u", $dns_user->val(), "/usr/bin/pihole-FTL", "test");
     };
 }
 
@@ -603,5 +623,8 @@ sub main {
 }
 
 ###############################################################################
+
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
 
 main();
