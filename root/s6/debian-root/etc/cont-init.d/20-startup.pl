@@ -361,6 +361,7 @@ sub fix_permissions ($) {
         {type=>"f", path=>"/etc/pihole/regex.list",       uid=>$dns,   gid=>"root", mode=>"0644"},
         {type=>"f", path=>"/etc/pihole/setupVars.conf",   uid=>$dns,   gid=>"root", mode=>"0644"},
         {type=>"f", path=>"/var/log/pihole.log",          uid=>$dns,   gid=>"root", mode=>"0644"},
+        {type=>"f", path=>"/var/log/pihole-FTL.log",      uid=>$dns,   gid=>"root", mode=>"0644"},
         {type=>"f", path=>"/var/log/lighttpd/access.log", uid=>$www,   gid=>"root", mode=>"0644"},
         {type=>"f", path=>"/var/log/lighttpd/error.log",  uid=>$www,   gid=>"root", mode=>"0644"},
         {type=>"f", path=>"/run/pihole-FTL.pid",          uid=>$dns,   gid=>"root", mode=>"0644"},
@@ -471,6 +472,9 @@ sub test_configuration ($) {
     say "\n\n/etc/lighttpd/conf-enabled/15-fastcgi-php.conf";
     do_or_die("cat", "-n", "/etc/lighttpd/conf-enabled/15-fastcgi-php.conf");
 
+    # check lighttpd configuration
+    do_or_die("lighttpd", "-t", "-f", "/etc/lighttpd/lighttpd.conf");
+
     # check pihole configuration
     do {
         local *STDOUT;
@@ -478,9 +482,6 @@ sub test_configuration ($) {
         open STDOUT, ">>", \$output;
         do_or_die("sudo", "-u", $dns_user->val(), "-E", "/usr/bin/pihole-FTL", "test");
     };
-
-    # check lighttpd configuration
-    do_or_die("lighttpd", "-t", "-f", "/etc/lighttpd/lighttpd.conf");
 }
 
 sub trim ($) {
