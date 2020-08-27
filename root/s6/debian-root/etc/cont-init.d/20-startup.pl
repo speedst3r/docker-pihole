@@ -424,7 +424,8 @@ sub configure_whitelists () {
 }
 
 sub do_or_die (@) {
-    system(@_) ? explain(@_) : say "+ ".join(" ", @_);
+    say "+ ".join(" ", @_) if exists $ENV{"PIHOLE_DEBUG"};
+    system(@_) and explain(@_);
 }
 
 # Explain how a call to system() failed, then abort
