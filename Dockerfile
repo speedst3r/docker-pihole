@@ -31,7 +31,7 @@ RUN chmod 755 /etc /usr /usr/bin /usr/bin/*
 ENV S6_LOGGING=0                        \
     S6_KEEP_ENV=1                       \
     S6_BEHAVIOUR_IF_STAGE2_FAILS=2      \
-    PIHOLE_DNS_USER=root                \
+    PIHOLE_DNS_USER=pihole              \
     PATH=/opt/pihole:${PATH}
 
 RUN /Dockerfile.sh && \

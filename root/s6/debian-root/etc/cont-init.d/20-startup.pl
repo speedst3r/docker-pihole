@@ -5,9 +5,11 @@ use strict;
 use warnings;
 no warnings "experimental";
 
-use Carp qw(carp croak);
+use Socket qw(AF_INET AF_INET6 SOCK_STREAM);
 use Data::Dumper;
-use File::Find;
+use File::Find qw(find);
+use File::Temp qw(tempfile);
+use Carp qw(carp croak);
 
 ###############################################################################
 
@@ -47,11 +49,23 @@ use File::Find;
             $self->{_val};
     }
 
+    sub set {
+        my $self = shift;
+        # TODO
+    }
+
+    sub delete {
+        my $self = shift;
+        return ($self->{_type} eq "env") ?
+            delete $self->{_env}{$self->{_name}} :
+            delete $self->{_val};
+    }
+
     sub exists {
         my $self = shift;
         return ($self->{_type} eq "env") ?
             exists $self->{_env}{$self->{_name}} :
-            defined $self->{_val};
+            exists $self->{_val};
     }
 }
 
@@ -92,6 +106,7 @@ sub fix_capabilities ($);
 sub fix_permissions ($);
 sub mask ($$);
 sub print_env(\%);
+sub read_conf ($);
 sub read_file ($);
 sub sed (&$@);
 sub set_defaults (\%);
@@ -99,6 +114,7 @@ sub test_configuration ($);
 sub trim ($);
 sub validate ($$$@);
 sub validate_ip ($);
+sub write_conf ($@);
 sub write_file ($@);
 
 ###############################################################################
@@ -112,11 +128,11 @@ sub configure ($$$$@) {
 
     validate($name, $reqd, $cvar, @allow);
 
-    my @conf = grep {!/^$name=/} read_file($path);
+    my @conf = grep {!/^$name=/} read_conf($path);
     push @conf, "$name=" . ($cvar->val() // "");
     chomp @conf;
 
-    write_file($path, @conf);
+    write_conf($path, @conf);
 }
 
 sub configure_admin_email ($) {
@@ -130,7 +146,7 @@ sub configure_blocklists () {
 
     my @items = ();
     push @items, "https://dbl.oisd.nl/\n";
-    write_file($path, @items);
+    write_conf($path, @items);
 }
 
 sub configure_dhcp() {
@@ -145,10 +161,10 @@ sub configure_dns_hostname ($$@) {
     my $ipv6 = shift;
     my @names = @_;
 
-    my @dnsmasq = read_file($DNSMASQ_CONF);
+    my @dnsmasq = read_conf($DNSMASQ_CONF);
     @dnsmasq    = grep {!/local\.list/} @dnsmasq;
 
-    write_file($DNSMASQ_CONF, @dnsmasq);
+    write_conf($DNSMASQ_CONF, @dnsmasq);
 }
 
 sub configure_dns_fqdn ($) {
@@ -156,11 +172,11 @@ sub configure_dns_fqdn ($) {
 
     configure_pihole("DNS_FQDN_REQUIRED", 0, $fqdn, "true", "false");
 
-    my @dnsmasq = grep {!/^domain-needeed/} read_file($DNSMASQ_CONF);
+    my @dnsmasq = grep {!/^domain-needeed/} read_conf($DNSMASQ_CONF);
     push @dnsmasq, "domain-needed"
         unless ($fqdn->exists() and $fqdn->val() eq "false");
 
-    write_file($DNSMASQ_CONF, @dnsmasq);
+    write_conf($DNSMASQ_CONF, @dnsmasq);
 }
 
 sub configure_dns_priv ($) {
@@ -168,11 +184,11 @@ sub configure_dns_priv ($) {
 
     configure_pihole("DNS_BOGUS_PRIV", 0, $priv, "true", "false");
 
-    my @dnsmasq = grep {!/^bogus-priv/} read_file($DNSMASQ_CONF);
+    my @dnsmasq = grep {!/^bogus-priv/} read_conf($DNSMASQ_CONF);
     push @dnsmasq, "bogus-priv"
         unless ($priv->exists() and $priv->val() eq "false");
 
-    write_file($DNSMASQ_CONF, @dnsmasq);
+    write_conf($DNSMASQ_CONF, @dnsmasq);
 }
 
 sub configure_dns_dnssec ($) {
@@ -180,7 +196,7 @@ sub configure_dns_dnssec ($) {
 
     configure_pihole("DNSSEC", 0, $dnssec, "true", "false");
 
-    my @dnsmasq = read_file($DNSMASQ_CONF);
+    my @dnsmasq = read_conf($DNSMASQ_CONF);
     @dnsmasq    = grep {!/^dnssec/} @dnsmasq;
     @dnsmasq    = grep {!/^trust-anchor=/} @dnsmasq;
 
@@ -189,23 +205,23 @@ sub configure_dns_dnssec ($) {
         push @dnsmasq, "trust-anchor=.,20326,8,2,E06D44B80B8F1D39A95C0B0D7C65D08458E880409BBC683457104237C7F8EC8D";
     }
 
-    write_file($DNSMASQ_CONF, @dnsmasq);
+    write_conf($DNSMASQ_CONF, @dnsmasq);
 }
 
 sub configure_dns_forwarding ($$$$) {
     my ($enable, $upstream, $network, $domain) = @_;
 
-    my @pihole  = read_file($PIHOLE_CONF);
+    my @pihole  = read_conf($PIHOLE_CONF);
     @pihole     = grep {!/^REV_SERVER/}  @pihole;
     @pihole     = grep {!/^CONDITIONAL/} @pihole;
 
-    my @dnsmasq = read_file($DNSMASQ_CONF);
+    my @dnsmasq = read_conf($DNSMASQ_CONF);
     @dnsmasq    = grep {!/^rev-server=/} @dnsmasq;
     @dnsmasq    = grep {!/^server=/}     @dnsmasq;
 
     if ($enable->exists() and $enable->val() eq "true")  {
         validate("REV_SERVER_TARGET", 1, $upstream);#, \&validate_ip);    TODO
-        validate("REV_SERVER_CIDR",   1, $network);#,  \&validate_cidr);
+        validate("REV_SERVER_CIDR",   1, $network);#,  \&validate_cidr);  TODO
 
         push @pihole, "REV_SERVER=true";
         push @pihole, "REV_SERVER_CIDR=".$network->val();
@@ -217,8 +233,8 @@ sub configure_dns_forwarding ($$$$) {
             if ($domain->exists() and $domain->val());
     }
 
-    write_file($DNSMASQ_CONF, @dnsmasq);
-    write_file($PIHOLE_CONF,  @pihole);
+    write_conf($DNSMASQ_CONF, @dnsmasq);
+    write_conf($PIHOLE_CONF,  @pihole);
 }
 
 sub configure_dns_interface ($$) {
@@ -227,7 +243,7 @@ sub configure_dns_interface ($$) {
     configure_pihole("PIHOLE_INTERFACE", 0, $iface);
     configure_pihole("DNSMASQ_LISTENING", 0, $listen, "all", "local", "iface");
 
-    my @dnsmasq = read_file($DNSMASQ_CONF);
+    my @dnsmasq = read_conf($DNSMASQ_CONF);
     @dnsmasq    = grep {!/^interface=/} @dnsmasq;
     @dnsmasq    = grep {!/^local-service/} @dnsmasq;
     @dnsmasq    = grep {!/^except-interface=/} @dnsmasq;
@@ -242,12 +258,12 @@ sub configure_dns_interface ($$) {
         }
     }
 
-    write_file($DNSMASQ_CONF, @dnsmasq);
+    write_conf($DNSMASQ_CONF, @dnsmasq);
 }
 
 sub configure_dns_upstream ($@) {
-    my @dnsmasq = grep {!/^server=/}      read_file($DNSMASQ_CONF);
-    my @pihole  = grep {!/PIHOLE_DNS_\d/} read_file($PIHOLE_CONF);
+    my @dnsmasq = grep {!/^server=/}      read_conf($DNSMASQ_CONF);
+    my @pihole  = grep {!/PIHOLE_DNS_\d/} read_conf($PIHOLE_CONF);
     my $count   = 0;
 
 
@@ -263,8 +279,8 @@ sub configure_dns_upstream ($@) {
     # No values given (or all were empty)
     validate("PIHOLE_DNS_1", 1, $_[0]) unless $count;
 
-    write_file($PIHOLE_CONF,  @pihole);
-    write_file($DNSMASQ_CONF, @dnsmasq);
+    write_conf($PIHOLE_CONF,  @pihole);
+    write_conf($DNSMASQ_CONF, @dnsmasq);
 }
 
 sub configure_dns_user ($) {
@@ -285,6 +301,7 @@ sub configure_ftl ($$$@) {
 sub configure_network (\%$$) {
     my ($env, $ipv4, $ipv6) = @_;
     my %env = %{$env};
+    my $sock;
 
     if ($ipv4->exists() and $ipv4->val() eq "auto") {
         my $output = `ip route get 1.1.1.1` or
@@ -294,13 +311,10 @@ sub configure_network (\%$$) {
         my ($if) = $output =~ m/dev\s+([^\s]+)/;
         my ($ip) = $output =~ m/src\s+([^\s]+)/;
 
-        $env{"PIHOLE_IPV4_ADDRESS"} = $ip;
+        say sprintf("Detected %s (auto): %s", $ipv4->name(), $ip);
+        $ipv4->set($ip);
     }
 
-    validate_ip(env("PIHOLE_IPV4_ADDRESS"));
-    configure_pihole("IPV4_ADDRESS", 1, env("PIHOLE_IPV4_ADDRESS"));
-
-    # TODO
     if ($ipv6->exists() and $ipv6->val() eq "auto") {
         my $output = `ip route get 2606:4700:4700::1001 2>/dev/null`
             or return;
@@ -330,10 +344,40 @@ sub configure_network (\%$$) {
         Dumper[@gua];
         Dumper[@ula];
         Dumper[@ll];
+
+        # TODO
+        # say sprintf("Detected %s (auto): %s", $ipv6->name(), $ip);
+        # $ipv6->set($ip);
     }
 
-    validate_ip(env("PIHOLE_IPV6_ADDRESS"));
-    configure_pihole("IPV6_ADDRESS", 1, $env, "PIHOLE_IPV6_ADDRESS");
+    if ($ipv4->exists() and $ipv4->val() eq "0.0.0.0") {
+        # This is interpreted as "listen on any IPv4 address, if one exists", so
+        # we first need to check if one exists.
+        if (!socket($sock, AF_INET, SOCK_STREAM, 0)) {
+            say sprintf("Determined %s (%s) is not available, so IPv4 is disabled",
+                $ipv4->name(), $ipv4->val());
+            $ipv4->delete();
+        }
+    }
+
+    if ($ipv6->exists() and $ipv6->val() eq "::") {
+        # This is interpreted as "listen on any IPv6 address, if one exists", so
+        # we first need to check if one exists.
+        #if (!socket($sock, AF_INET6, SOCK_STREAM, 0)) {
+            say sprintf("Determined %s (%s) is not available, so IPv6 is disabled",
+                $ipv6->name(), $ipv6->val());
+            $ipv6->delete();
+        #}
+    }
+
+    croak sprintf("Neither %s nor %s are configured", $ipv4->name, $ipv6->name)
+        unless ($ipv4->exists() or $ipv6->exists());
+
+    validate_ip($ipv4);
+    validate_ip($ipv6);
+
+    configure_pihole("IPV4_ADDRESS", 0, $ipv4);
+    configure_pihole("IPV6_ADDRESS", 0, $ipv6);
 }
 
 # Change an option in setupVars.conf
@@ -350,7 +394,7 @@ sub configure_temperature ($) {
 sub configure_web_address ($$$) {
     my ($ipv4, $ipv6, $port) = @_;
     my $path = "/etc/lighttpd/lighttpd.conf";
-    my @lighttpd = read_file($path);
+    my @lighttpd = read_conf($path);
 
     croak sprintf("%s (%s) is invalid, must be 1-65535", $port->name(), $port->val())
         unless ($port->val() =~ /\A\d+\z/ and $port->val() > 0 and $port->val() <= 65535);
@@ -358,7 +402,7 @@ sub configure_web_address ($$$) {
     @lighttpd = grep {!/^\$SERVER\["socket"\]/} @lighttpd;
     @lighttpd = grep {!/^server\.port\s*=/} @lighttpd;
     @lighttpd = grep {!/^server\.bind\s*=/} @lighttpd;
-    @lighttpd = grep {!/use-ipv6\.pl/} @lighttpd;
+    @lighttpd = grep {!/use-ipv6/} @lighttpd;
 
     push @lighttpd, "server.port = ".$port->val();
     push @lighttpd, 'server.use-ipv6 = "enable"' if $ipv6->exists();
@@ -371,13 +415,13 @@ sub configure_web_address ($$$) {
         push @lighttpd, sprintf('$SERVER["socket"] == "[%s]:%s" { }', $ipv6->val(), $port->val()) if $ipv6->exists();
     }
 
-    write_file($path, @lighttpd);
+    write_conf($path, @lighttpd);
 }
 
 sub configure_web_fastcgi ($$) {
     my ($ipv4, $host) = @_;
     my $path = "/etc/lighttpd/conf-enabled/15-fastcgi-php.conf";
-    my @fastcgi = read_file($path);
+    my @fastcgi = read_conf($path);
 
     @fastcgi = grep {!/^\s*"PHP_ERROR_LOG"/ } @fastcgi;
     @fastcgi = grep {!/^\s*"VIRTUAL_HOST"/ } @fastcgi;
@@ -390,14 +434,13 @@ sub configure_web_fastcgi ($$) {
     push @env, sprintf('%s"PHP_ERROR_LOG" => "%s",', "\t\t\t", "/var/log/lighttpd/error.log");
 
     @fastcgi = sed {/"bin-environment"/} \@env, @fastcgi;
-    write_file($path, @fastcgi);
+    write_conf($path, @fastcgi);
 }
 
 sub configure_web_password ($$) {
     my ($pw, $pwfile) = @_;
 
     if ($pwfile->exists() and -f $pwfile->val() and -s $pwfile->val()) {
-        say "Reading web password from ".$pwfile->val();
         $pw = lit(read_file($pwfile));
         chomp $pw;
     }
@@ -419,7 +462,7 @@ sub configure_whitelists () {
     push @items, "https://github.com/anudeepND/whitelist/blob/master/domains/optional-list.txt";
     push @items, "https://github.com/anudeepND/whitelist/blob/master/domains/referral-sites.txt";
     push @items, "https://github.com/anudeepND/whitelist/blob/master/domains/whitelist.txt";
-    write_file($path, join("\n", @items)."\n");
+    write_conf($path, join("\n", @items)."\n");
 }
 
 sub do_or_die (@) {
@@ -520,17 +563,22 @@ sub print_env(\%) {
     }
 }
 
+sub read_conf ($) {
+    my ($path) = @_;
+
+    @{$FILES{$path}} = read_file($path)
+        unless (exists $FILES{$path});
+
+    return @{$FILES{$path}}
+}
+
 sub read_file ($) {
-    my ($path)  = @_;
-
-    if (!exists $FILES{$_[0]}) {
-        @{$FILES{$path}} = do {
-            local @ARGV = ($path);
-            map { chomp; $_ } <>;
-        }
-    }
-
-    return @{$FILES{$_[0]}}
+    my ($path) = @_;
+    local @ARGV = @_;
+    croak "$path does not exist" unless (-e $path);
+    croak "$path is not a file" unless (-f $path);
+    croak "$path is not readable" unless (-r $path);
+    return map { chomp; $_ } <>;
 }
 
 sub sed (&$@) {
@@ -560,6 +608,10 @@ sub sed (&$@) {
 sub set_defaults (\%) {
     my ($env) = @_;
 
+    # TODO: Default value set here isn't read by services.d/pihole-FTL/run
+    exists $env->{"PIHOLE_DNS_USER"}
+        or croak("PIHOLE_DNS_USER should be set in Dockerfile, docker-compose.yml, or passed via docker run -e...");
+
     $env->{"PIHOLE_ADMIN_EMAIL"                } //= "root\@example.com";
     $env->{"PIHOLE_DNS_BLOCKING_MODE"          } //= "NULL";
     $env->{"PIHOLE_DNS_BOGUS_PRIV"             } //= "true";
@@ -567,7 +619,6 @@ sub set_defaults (\%) {
     $env->{"PIHOLE_DNS_FQDN_REQUIRED"          } //= "true";
     $env->{"PIHOLE_DNS_LOG_QUERIES",           } //= "true";
     $env->{"PIHOLE_DNS_UPSTREAM_1"             } //= "1.1.1.1";
-    $env->{"PIHOLE_DNS_USER"                   } //= "pihole";
     $env->{"PIHOLE_LISTEN"                     } //= "all";
     $env->{"PIHOLE_TEMPERATURE_UNIT"           } //= "f";
     $env->{"PIHOLE_WEB_ENABLED"                } //= "true";
@@ -603,12 +654,8 @@ sub test_configuration ($) {
     do_or_die("lighttpd", "-t", "-f", "/etc/lighttpd/lighttpd.conf");
 
     # check pihole configuration
-    do {
-        local *STDOUT;
-        my $output;
-        open STDOUT, ">>", \$output;
-        do_or_die("sudo", "-u", $dns_user->val(), "/usr/bin/pihole-FTL", "test");
-    };
+    # TODO: silence STDOUT
+    do_or_die("sudo", "-u", $dns_user->val(), "/usr/bin/pihole-FTL", "test");
 }
 
 sub trim ($) {
@@ -633,30 +680,38 @@ sub validate ($$$@) {
 
 sub validate_ip ($) {
     my ($ip) = @_;
-
     return unless $ip->exists();
+
+    # TODO: Silence STDOUT, STDERR
     system("ip", "route", "get", $ip->val()) and
         croak(sprintf("%s (%s) is invalid", $ip->name(), $ip->val()));
 }
 
+sub write_conf ($@) {
+    my $path = shift;
+    @{$FILES{$path}} = @_;
+
+    say "Updating $path, ".scalar(@_)." lines" if exists $ENV{"PIHOLE_DEBUG"};
+}
+
 sub write_file ($@) {
-    # my $path = shift;
-    # @{$FILES{$path}} = @_;
+    my $path    = shift;
+    my $content = join("\n", @_);
+    $content   .= "\n" unless $content =~ /\n\z/;
+
+    say "Writing $path, ".scalar(@_)." lines" if exists $ENV{"PIHOLE_DEBUG"};
+
+    open(my $io, ">", $path) or croak "can't open $path for writing: $!";
+    print $io $content;
+    close $io;
+
+    # Just in case
+    delete $FILES{$path};
 }
 
 sub sync_files() {
-    foreach my $path (keys %FILES) {
-        say "Writing $path";
-
-        my ($io, $name) = tempfile();
-
-        my $content = join "\n", @{$FILES{$path}};
-        $content   .= "\n" unless $content =~ /\n\z/;
-
-        print $io $content;
-        close $io;
-        rename $name, $path;
-        delete $FILES{$path};
+    foreach my $path (sort (keys %FILES)) {
+        write_file($path, @{$FILES{$path}});
     }
 }
 
@@ -664,11 +719,13 @@ sub sync_files() {
 
 sub main {
     set_defaults(%ENV);
-    configure_network(%ENV, env("PIHOLE_IPV4_ADDRESS"), env("PIHOLE_IPV6_ADDRESS"));
     print_env(%ENV);
 
-    fix_capabilities(env("PIHOLE_DNS_USER"));
     fix_permissions(env("PIHOLE_DNS_USER"));
+    fix_capabilities(env("PIHOLE_DNS_USER"));
+
+    configure_dns_defaults();
+    configure_network(%ENV, env("PIHOLE_IPV4_ADDRESS"), env("PIHOLE_IPV6_ADDRESS"));
 
     # Update version numbers
     do_or_die("pihole", "updatechecker");
@@ -677,7 +734,6 @@ sub main {
     configure_web_address(env("PIHOLE_IPV4_ADDRESS"), env("PIHOLE_IPV6_ADDRESS"), env("PIHOLE_WEB_PORT"));
     configure_web_fastcgi(env("PIHOLE_IPV4_ADDRESS"), env("PIHOLE_WEB_HOSTNAME"));
 
-    configure_dns_defaults();
     configure_dns_interface(env("PIHOLE_LISTEN"), env("PIHOLE_INTERFACE"));
     configure_dns_user(env("PIHOLE_DNS_USER"));
     configure_dns_hostname(env("PIHOLE_IPV4_ADDRESS"), env("PIHOLE_IPV6_ADDRESS"), env("PIHOLE_WEB_HOSTNAME"));
