@@ -193,7 +193,7 @@ sub configure_dns_dnssec ($) {
 }
 
 sub configure_dns_forwarding ($$$$) {
-    my ($enable, $upstream, $network4, $network6, $domain) = @_;
+    my ($enable, $upstream, $network, $domain) = @_;
 
     my @pihole  = read_file($PIHOLE_CONF);
     @pihole     = grep {!/^REV_SERVER/}  @pihole;
@@ -700,7 +700,7 @@ sub main {
 
     configure_dhcp();
 
-    configure_pihole("QUERY_LOGGING"                 , 0, env("PIHOLE_DNS_LOG_QUERIES",    "true", "false");
+    configure_pihole("QUERY_LOGGING"                 , 0, env("PIHOLE_DNS_LOG_QUERIES"),   "true", "false");
     configure_pihole("INSTALL_WEB_SERVER"            , 0, env("PIHOLE_WEB_INSTALL_SERVER"),"true", "false");
     configure_pihole("INSTALL_WEB_INTERFACE"         , 0, env("PIHOLE_WEB_INSTALL_UI"),    "true", "false");
     configure_pihole("LIGHTTPD_ENABLED"              , 0, env("PIHOLE_WEB_ENABLED"),       "true", "false");
