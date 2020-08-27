@@ -40,4 +40,4 @@ RUN /Dockerfile.sh && \
 SHELL       ["/bin/bash", "-c"]
 WORKDIR     /
 ENTRYPOINT  [ "/s6-init" ]
-HEALTHCHECK CMD dig +norecurse +retry=0 @127.0.0.1 pi.hole || exit 1
+HEALTHCHECK CMD dig +norecurse +retry=0 @127.0.0.1 localhost
