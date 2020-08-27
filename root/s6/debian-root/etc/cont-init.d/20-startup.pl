@@ -101,7 +101,6 @@ sub validate ($$$@);
 sub validate_ip ($);
 sub write_file ($@);
 
-
 ###############################################################################
 
 sub configure ($$$$@) {
@@ -194,7 +193,7 @@ sub configure_dns_dnssec ($) {
 }
 
 sub configure_dns_forwarding ($$$$) {
-    my ($enable, $upstream, $network, $domain) = @_;
+    my ($enable, $upstream, $network4, $network6, $domain) = @_;
 
     my @pihole  = read_file($PIHOLE_CONF);
     @pihole     = grep {!/^REV_SERVER/}  @pihole;
@@ -561,23 +560,22 @@ sub sed (&$@) {
 sub set_defaults (\%) {
     my ($env) = @_;
 
-    $env->{"PIHOLE_BLOCKING_MODE"              } //= "NULL";
-    $env->{"PIHOLE_TEMPERATURE_UNIT"           } //= "f";
     $env->{"PIHOLE_ADMIN_EMAIL"                } //= "root\@example.com";
-    $env->{"PIHOLE_DNS_UPSTREAM_1"             } //= "1.1.1.1";
-    $env->{"PIHOLE_LISTEN"                     } //= "all";
-    $env->{"PIHOLE_QUERY_LOGGING"              } //= "true";
+    $env->{"PIHOLE_DNS_BLOCKING_MODE"          } //= "NULL";
     $env->{"PIHOLE_DNS_BOGUS_PRIV"             } //= "true";
-    $env->{"PIHOLE_DNS_FQDN_REQUIRED"          } //= "true";
     $env->{"PIHOLE_DNS_DNSSEC"                 } //= "false";
-    $env->{"PIHOLE_DNS_ONLY_ANSWER_FQDN"       } //= "true";
+    $env->{"PIHOLE_DNS_FQDN_REQUIRED"          } //= "true";
+    $env->{"PIHOLE_DNS_LOG_QUERIES",           } //= "true";
+    $env->{"PIHOLE_DNS_UPSTREAM_1"             } //= "1.1.1.1";
+    $env->{"PIHOLE_DNS_USER"                   } //= "pihole";
+    $env->{"PIHOLE_LISTEN"                     } //= "all";
+    $env->{"PIHOLE_TEMPERATURE_UNIT"           } //= "f";
+    $env->{"PIHOLE_WEB_ENABLED"                } //= "true";
     $env->{"PIHOLE_WEB_HOSTNAME"               } //= trim(`hostname -f 2>/dev/null || hostname`);
+    $env->{"PIHOLE_WEB_INSTALL_SERVER"         } //= "true";
+    $env->{"PIHOLE_WEB_INSTALL_UI"             } //= "true";
     $env->{"PIHOLE_WEB_PORT",                  } //= "80";
     $env->{"PIHOLE_WEB_UI"                     } //= "boxed";
-    $env->{"INSTALL_WEB_SERVER"                } //= "true";
-    $env->{"INSTALL_WEB_INTERFACE"             } //= "true";
-    $env->{"PIHOLE_LIGHTTPD_ENABLED"           } //= "true";
-    $env->{"PIHOLE_DNS_USER"                   } //= "pihole";
 }
 
 sub test_configuration ($) {
@@ -637,7 +635,7 @@ sub validate_ip ($) {
     my ($ip) = @_;
 
     return unless $ip->exists();
-    system("ip", "route", "get", $ip->val()) or
+    system("ip", "route", "get", $ip->val()) and
         croak(sprintf("%s (%s) is invalid", $ip->name(), $ip->val()));
 }
 
@@ -702,14 +700,14 @@ sub main {
 
     configure_dhcp();
 
-    configure_pihole("QUERY_LOGGING"                 , 0, env("PIHOLE_QUERY_LOGGING"),     "true", "false");
-    configure_pihole("INSTALL_WEB_SERVER"            , 0, env("INSTALL_WEB_SERVER"),       "true", "false");
-    configure_pihole("INSTALL_WEB_INTERFACE"         , 0, env("INSTALL_WEB_INTERFACE"),    "true", "false");
-    configure_pihole("LIGHTTPD_ENABLED"              , 0, env("PIHOLE_LIGHTTPD_ENABLED"),  "true", "false");
+    configure_pihole("QUERY_LOGGING"                 , 0, env("PIHOLE_DNS_LOG_QUERIES",    "true", "false");
+    configure_pihole("INSTALL_WEB_SERVER"            , 0, env("PIHOLE_WEB_INSTALL_SERVER"),"true", "false");
+    configure_pihole("INSTALL_WEB_INTERFACE"         , 0, env("PIHOLE_WEB_INSTALL_UI"),    "true", "false");
+    configure_pihole("LIGHTTPD_ENABLED"              , 0, env("PIHOLE_WEB_ENABLED"),       "true", "false");
     configure_pihole("WEBUIBOXEDLAYOUT"              , 0, env("PIHOLE_WEB_UI"),            "boxed", "normal");
 
     # https://docs.pi-hole.net/ftldns/configfile/
-    configure_ftl("BLOCKINGMODE",      1, env("PIHOLE_BLOCKING_MODE"),        "NULL", "IP-NODATA-AAAA", "IP", "NXDOMAIN", "NODATA");
+    configure_ftl("BLOCKINGMODE",      1, env("PIHOLE_DNS_BLOCKING_MODE"),    "NULL", "IP-NODATA-AAAA", "IP", "NXDOMAIN", "NODATA");
     configure_ftl("SOCKET_LISTENING",  0, lit("local"),                       "local", "all");
     configure_ftl("FTLPORT",           0, lit("4711"));
     configure_ftl("RESOLVE_IPV6",      0, lit("true"),                        "true", "false");
