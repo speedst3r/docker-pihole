@@ -304,57 +304,65 @@ sub configure_network (\%$$) {
     my $sock;
 
     if ($ipv4->exists() and $ipv4->val() eq "auto") {
-        my $output = `ip route get 1.1.1.1` or
-            explain("ip route get 1.1.1.1");
+        my $output = `ip route get 1.1.1.1 2>/dev/null`;
 
-        my ($gw) = $output =~ m/via\s+([^\s]+)/;
-        my ($if) = $output =~ m/dev\s+([^\s]+)/;
-        my ($ip) = $output =~ m/src\s+([^\s]+)/;
+        if ($? == 0) {
+            my ($gw) = $output =~ m/via\s+([^\s]+)/;
+            my ($if) = $output =~ m/dev\s+([^\s]+)/;
+            my ($ip) = $output =~ m/src\s+([^\s]+)/;
 
-        say sprintf("Detected %s (auto): %s", $ipv4->name(), $ip);
-        $ipv4->set($ip);
+            say sprintf("Detected %s (auto): %s", $ipv4->name(), $ip);
+            $ipv4->set($ip);
+        } else {
+            say sprintf("Failed to auto-detect %s: %s", $ipv4->name, $output);
+            $ipv4->delete();
+        }
     }
 
     if ($ipv6->exists() and $ipv6->val() eq "auto") {
-        my $output = `ip route get 2606:4700:4700::1001 2>/dev/null`
-            or return;
+        my $output = `ip route get 2606:4700:4700::1001 2>/dev/null`;
 
-        my ($gw) = $output =~ m/via\s+([^\s]+)/;
-        my ($if) = $output =~ m/dev\s+([^\s]+)/;
-        my ($ip) = $output =~ m/src\s+([^\s]+)/;
+        if ($? == 0) {
+            my ($gw) = $output =~ m/via\s+([^\s]+)/;
+            my ($if) = $output =~ m/dev\s+([^\s]+)/;
+            my ($ip) = $output =~ m/src\s+([^\s]+)/;
 
-        # TODO sanitize
-        my @output = `ip -6 addr show dev '$if'`
-            or explain("ip -6 addr show dev '$if'");
+            # TODO sanitize
+            my @output = `ip -6 addr show dev '$if'`
+                or explain("ip -6 addr show dev '$if'");
 
-        my @gua = (); # global unique addresses
-        my @ula = (); # unique local addresses
-        my @ll  = (); # link local addresses
+            my @gua = (); # global unique addresses
+            my @ula = (); # unique local addresses
+            my @ll  = (); # link local addresses
 
-        foreach (grep {/inet6/} @output) {
-            my ($ip) = m{inet6\s+([^/])+/};
-            my ($chazwazza) = $ip =~ /^([^:]+):/;
-            $chazwazza = hex($chazwazza);
+            foreach (grep {/inet6/} @output) {
+                my ($ip) = m{inet6\s+([^/])+/};
+                my ($chazwazza) = $ip =~ /^([^:]+):/;
+                $chazwazza = hex($chazwazza);
 
-            push @ula, $ip if (($chazwazza & mask( 7, 16)) == 0xfc00);
-            push @gua, $ip if (($chazwazza & mask( 3, 16)) == 0x2000);
-            push @ll,  $ip if (($chazwazza & mask(10, 16)) == 0xfe80);
+                push @ula, $ip if (($chazwazza & mask( 7, 16)) == 0xfc00);
+                push @gua, $ip if (($chazwazza & mask( 3, 16)) == 0x2000);
+                push @ll,  $ip if (($chazwazza & mask(10, 16)) == 0xfe80);
+            }
+
+            Dumper[@gua];
+            Dumper[@ula];
+            Dumper[@ll];
+
+            # TODO
+            # say sprintf("Detected %s (auto): %s", $ipv6->name(), $ip);
+            # $ipv6->set($ip);
+        } else {
+            say sprintf("Failed to auto-detect %s: %s", $ipv6->name(), $output);
+            $ipv6->delete();
         }
-
-        Dumper[@gua];
-        Dumper[@ula];
-        Dumper[@ll];
-
-        # TODO
-        # say sprintf("Detected %s (auto): %s", $ipv6->name(), $ip);
-        # $ipv6->set($ip);
     }
 
     if ($ipv4->exists() and $ipv4->val() eq "0.0.0.0") {
         # This is interpreted as "listen on any IPv4 address, if one exists", so
         # we first need to check if one exists.
-        if (!socket($sock, AF_INET, SOCK_STREAM, 0)) {
-            say sprintf("Determined %s (%s) is not available, so IPv4 is disabled",
+        if (!socket($sock, AF_INET, SOCK_STREAM, 0) or !`ip -4 addr`) {
+            say sprintf("Determined IPv4 is not available; deleting %s='%s'",
                 $ipv4->name(), $ipv4->val());
             $ipv4->delete();
         }
@@ -363,11 +371,11 @@ sub configure_network (\%$$) {
     if ($ipv6->exists() and $ipv6->val() eq "::") {
         # This is interpreted as "listen on any IPv6 address, if one exists", so
         # we first need to check if one exists.
-        #if (!socket($sock, AF_INET6, SOCK_STREAM, 0)) {
-            say sprintf("Determined %s (%s) is not available, so IPv6 is disabled",
+        if (!socket($sock, AF_INET6, SOCK_STREAM, 0) or !`ip -6 addr`) {
+            say sprintf("Determined IPv6 is not available; deleting %s='%s'",
                 $ipv6->name(), $ipv6->val());
             $ipv6->delete();
-        #}
+        }
     }
 
     croak sprintf("Neither %s nor %s are configured", $ipv4->name, $ipv6->name)
@@ -396,7 +404,8 @@ sub configure_web_address ($$$) {
     my $path = "/etc/lighttpd/lighttpd.conf";
     my @lighttpd = read_conf($path);
 
-    croak sprintf("%s (%s) is invalid, must be 1-65535", $port->name(), $port->val())
+    validate("WEB_PORT", 1, $port);
+    croak sprintf("%s='%s' is invalid, must be 1-65535", $port->name(), $port->val())
         unless ($port->val() =~ /\A\d+\z/ and $port->val() > 0 and $port->val() <= 65535);
 
     @lighttpd = grep {!/^\$SERVER\["socket"\]/} @lighttpd;
@@ -675,7 +684,7 @@ sub validate ($$$@) {
         croak(($cvar->name() // $name)." cannot be empty");
 
     ($cvar->exists() and %allow and !exists($allow{$cvar->val()})) and
-        croak(($cvar->name() // $name)." cannot be ".$cvar->val()." (expected one of: ".join(", ", @_).")");
+        croak(($cvar->name() // $name)." cannot be '".$cvar->val()."' (expected one of: ".join(", ", @_).")");
 }
 
 sub validate_ip ($) {
@@ -684,7 +693,7 @@ sub validate_ip ($) {
 
     # TODO: Silence STDOUT, STDERR
     system("ip", "route", "get", $ip->val()) and
-        croak(sprintf("%s (%s) is invalid", $ip->name(), $ip->val()));
+        croak(sprintf("%s='%s' is invalid", $ip->name(), $ip->val()));
 }
 
 sub write_conf ($@) {
