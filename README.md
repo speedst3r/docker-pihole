@@ -74,35 +74,37 @@ docker run \
 
 ## Environment variables
 
-| Environment variable name     | Required | Default | Values      | Description |
-| ----------------------------- | -------- | ------- | ----------- | ----------- |
-| `PIHOLE_ADMIN_EMAIL`            | No       |         |             | Set an administrative contact address on the block page
-| `PIHOLE_DNS_BLOCKING_MODE`      | No       | `NULL`    | [See docs](https://docs.pi-hole.net/ftldns/blockingmode/)    | Method used to block queries
-| `PIHOLE_DNS_BOGUS_PRIV`         | No       | `true`    | `true`, `false` | Forward reverse lookups on private ranges to upstream servers
-| `PIHOLE_DNS_CNAME_INSPECT`      | No       | `true`    | `true`, `false` | Enable or disable deep CNAME inspection. See [PR #663](https://github.com/pi-hole/FTL/pull/663)
-| `PIHOLE_DNS_DNSSEC`             | No       | `false`   | `true`, `false` | Enable or disable DNSSEC
-| `PIHOLE_DNS_FQDN_REQUIRED`      | No       | `true`    | `true`, `false` | Forward queries on non-FQDNs to upstream servers
-| `PIHOLE_DNS_IGNORE_LOCALHOST`   | No       | `false`   | `true`, `false` | Ignore queries originating from the local machine
-| `PIHOLE_DNS_LAN_DOMAIN`         | No       |         |             | When LAN forwarding is enabled, forward queries for this domain to upstream LAN DNS server
-| `PIHOLE_DNS_LAN_ENABLE`         | No       | `false`   | `true`, `false` | Enable or disable forwarding queries for LAN to a separate DNS server
-| `PIHOLE_DNS_LAN_NETWORK`        | No       |         | CIDR IPv4 or IPv6   | When LAN forwarding is enabled, forward reverse queries for this network range to upstream LAN DNS server
-| `PIHOLE_DNS_LAN_UPSTREAM`       | No       |         |             | When LAN forwarding is enabled, use this DNS server to resolve LAN queries
-| `PIHOLE_DNS_PRIVACY_LVL`        | No       | `0`       | [See docs](https://docs.pi-hole.net/ftldns/privacylevels/)    | Specifies level of detail given in Pi-hole statistics.
-| `PIHOLE_DNS_UPSTREAM_1`         | Yes      | `0.0.0.0` | IPv4/6 addr | Primary upstream DNS server
-| `PIHOLE_DNS_UPSTREAM_2`         | No       |         | IPv4/6 addr | Secondary upstream DNS server
-| `PIHOLE_DNS_UPSTREAM_3`         | No       |         | IPv4/6 addr | Tertiary upstream DNS server
-| `PIHOLE_DNS_UPSTREAM_4`         | No       |         | IPv4/6 addr | Quaternary upstream DNS server
-| `PIHOLE_DNS_USER`               | No       | `pihole`  |             | User which runs `pihole-FTL` (can be `root`)
-| `PIHOLE_IPV4_ADDRESS`           | No       | `0.0.0.0`, `auto`, IPv4 addr | Your Pi-hole's address, used to redirect/block requests
-| `PIHOLE_IPV6_ADDRESS`           | No       | `::`, `auto`, IPv6 addr   | Your Pi-hole's address, used to redirect/block requests
-| `PIHOLE_LISTEN`                 | No       | `all`     | `all`, `iface`, `local` | 
-| `PIHOLE_INTERFACE`              | No       |         |             | When `PIHOLE_LISTEN` is `iface`, specifies the interface used to listen for DNS queries and HTTP requests
-| `PIHOLE_TEMPERATURE_UNIT`       | No       | `F`       | `F`, `C`, `K`     |
-| `PIHOLE_WEB_HOSTNAME`           | No       | `\`hostname -f\`` |     | The hostname used to access the Pi-hole admin page
-| `PIHOLE_WEB_PASSWORD`           | No       | randomized |          | The password required to access the Pi-hole admin page. See `pihole logs pihole` to find the randomized password
-| `PIHOLE_WEB_PASSWORD_FILE`      | No       |         |             | Filename containing password, will override `PIHOLE_PASSWORD` if it's set.
-| `PIHOLE_WEB_PORT`               | No       | `80`      |             | Which port the admin page is listening on
-| `PIHOLE_WEB_UI`                 | No       | `boxed`   | `boxed`, `traditional` | | Which layout is used for the admin page
+| Environment variable name     | Default | Values      | Description |
+| ----------------------------- | ------- | ----------- | ----------- |
+| `PIHOLE_ADMIN_EMAIL`            |         |             | Set an administrative contact address on the block page
+| `PIHOLE_DNS_BLOCKING_MODE`      | `NULL`    | [See docs](https://docs.pi-hole.net/ftldns/blockingmode/)    | Method used to block queries
+| `PIHOLE_DNS_BOGUS_PRIV`         | `true`    | `true`, `false` | Forward reverse lookups on private ranges to upstream servers
+| `PIHOLE_DNS_CNAME_INSPECT`      | `true`    | `true`, `false` | Enable or disable deep CNAME inspection. See [PR #663](https://github.com/pi-hole/FTL/pull/663)
+| `PIHOLE_DNS_DNSSEC`             | `false`   | `true`, `false` | Enable or disable DNSSEC
+| `PIHOLE_DNS_FQDN_REQUIRED`      | `true`    | `true`, `false` | Forward queries on non-FQDNs to upstream servers
+| `PIHOLE_DNS_IGNORE_LOCALHOST`   | `false`   | `true`, `false` | Ignore queries originating from the local machine
+| `PIHOLE_DNS_LAN_DOMAIN`         |         |             | When LAN forwarding is enabled, forward queries for this domain to upstream LAN DNS server
+| `PIHOLE_DNS_LAN_ENABLE`         | `false`   | `true`, `false` | Enable or disable forwarding queries for LAN to a separate DNS server
+| `PIHOLE_DNS_LAN_NETWORK`        |         | CIDR IPv4 or IPv6   | When LAN forwarding is enabled, forward reverse queries for this network range to upstream LAN DNS server
+| `PIHOLE_DNS_LAN_UPSTREAM`       |         |             | When LAN forwarding is enabled, use this DNS server to resolve LAN queries
+| `PIHOLE_DNS_PRIVACY_LVL`        | `0`       | [See docs](https://docs.pi-hole.net/ftldns/privacylevels/)    | Specifies level of detail given in Pi-hole statistics.
+| `PIHOLE_DNS_UPSTREAM_1`*        |         | IPv4/6 addr | Primary upstream DNS server
+| `PIHOLE_DNS_UPSTREAM_2`         |         | IPv4/6 addr | Secondary upstream DNS server
+| `PIHOLE_DNS_UPSTREAM_3`         |         | IPv4/6 addr | Tertiary upstream DNS server
+| `PIHOLE_DNS_UPSTREAM_4`         |         | IPv4/6 addr | Quaternary upstream DNS server
+| `PIHOLE_DNS_USER`               | `pihole`  |             | User which runs `pihole-FTL` (can be `root`)
+| `PIHOLE_IPV4_ADDRESS`           | `0.0.0.0`, `auto`, IPv4 addr | Your Pi-hole's address, used to redirect/block requests
+| `PIHOLE_IPV6_ADDRESS`           | `::`, `auto`, IPv6 addr   | Your Pi-hole's address, used to redirect/block requests
+| `PIHOLE_LISTEN`                 | `all`     | `all`, `iface`, `local` | 
+| `PIHOLE_INTERFACE`              |         |             | When `PIHOLE_LISTEN` is `iface`, specifies the interface used to listen for DNS queries and HTTP requests
+| `PIHOLE_TEMPERATURE_UNIT`       | `F`       | `F`, `C`, `K`     |
+| `PIHOLE_WEB_HOSTNAME`           | `\`hostname -f\`` |     | The hostname used to access the Pi-hole admin page
+| `PIHOLE_WEB_PASSWORD`           | randomized |          | The password required to access the Pi-hole admin page. See `pihole logs pihole` to find the randomized password
+| `PIHOLE_WEB_PASSWORD_FILE`      |         |             | Filename containing password, will override `PIHOLE_PASSWORD` if it's set.
+| `PIHOLE_WEB_PORT`               | `80`      |             | Which port the admin page is listening on
+| `PIHOLE_WEB_UI`                 | `boxed`   | `boxed`, `traditional` | | Which layout is used for the admin page
+
+Required environment variables (which do not have default values) are indicated by `*`
 
 ## Tips and tricks
 
