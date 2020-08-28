@@ -101,18 +101,22 @@ docker run \
 | `PIHOLE_WEB_HOSTNAME`           | `hostname -f` |         | The hostname used to access the Pi-hole admin page
 | `PIHOLE_WEB_PASSWORD`           | randomized |          | The password required to access the Pi-hole admin page. See `pihole logs pihole` to find the randomized password
 | `PIHOLE_WEB_PASSWORD_FILE`      |         |             | Filename containing password, will override `PIHOLE_PASSWORD` if it's set.
-| `PIHOLE_WEB_PORT`               | `80`      |             | Which port the admin page is listening on
+| `PIHOLE_WEB_PORT`               | `80`      |             | Which port the admin page should listen on
 | `PIHOLE_WEB_UI`                 | `boxed`   | `boxed`, `traditional` | | Which layout is used for the admin page
 
 Required environment variables (which do not have default values) are indicated by `*`
 
 ## Tips and tricks
 
+...
+
 ## Docker tags and versioning
+
+...
 
 ## Upgrading
 
-## Upgrade notices
+...
 
 ## Running DHCP from Docker Pi-hole
 
