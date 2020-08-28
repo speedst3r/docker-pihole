@@ -624,8 +624,11 @@ sub set_defaults (\%) {
     $env->{"PIHOLE_ADMIN_EMAIL"                } //= "root\@example.com";
     $env->{"PIHOLE_DNS_BLOCKING_MODE"          } //= "NULL";
     $env->{"PIHOLE_DNS_BOGUS_PRIV"             } //= "true";
+    $env->{"PIHOLE_DNS_CNAME_INSPECT"          } //= "true";
+    $env->{"PIHOLE_DNS_PRIVACY_LVL"            } //= "0";
     $env->{"PIHOLE_DNS_DNSSEC"                 } //= "false";
     $env->{"PIHOLE_DNS_FQDN_REQUIRED"          } //= "true";
+    $env->{"PIHOLE_DNS_IGNORE_LOCALHOST"       } //= "false";
     $env->{"PIHOLE_DNS_LOG_QUERIES",           } //= "true";
     $env->{"PIHOLE_DNS_UPSTREAM_1"             } //= "1.1.1.1";
     $env->{"PIHOLE_LISTEN"                     } //= "all";
@@ -780,9 +783,9 @@ sub main {
     configure_ftl("DBIMPORT",          0, lit("true"),                        "true", "false");
     configure_ftl("MAXDBDAYS",         0, lit("180"));
     configure_ftl("DBINTERVAL",        0, lit("1.0"));
-    #onfigure_ftl("PRIVACYLEVEL",      0, env("PIHOLE_DNS_PRIVACY_LVL"),      "0", "1", "2");
-    #onfigure_ftl("CNAMEDEEPINSPECT",  1, env("PIHOLE_DNS_CNAME_INSPECT"),    "true", "false");
-    #onfigure_ftl("IGNORE_LOCALHOST",  0, env("PIHOLE_DNS_IGNORE_LOCALHOST"), "true", "false");
+    configure_ftl("PRIVACYLEVEL",      0, env("PIHOLE_DNS_PRIVACY_LVL"),      "0", "1", "2");
+    configure_ftl("CNAMEDEEPINSPECT",  1, env("PIHOLE_DNS_CNAME_INSPECT"),    "true", "false");
+    configure_ftl("IGNORE_LOCALHOST",  0, env("PIHOLE_DNS_IGNORE_LOCALHOST"), "true", "false");
 
     configure_blocklists();
     configure_whitelists();
