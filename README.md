@@ -85,7 +85,7 @@ docker run \
 | `PIHOLE_DNS_IGNORE_LOCALHOST`   | `false`   | `true`, `false` | Ignore queries originating from the local machine
 | `PIHOLE_DNS_LAN_DOMAIN`         |         |             | When LAN forwarding is enabled, forward queries for this domain to upstream LAN DNS server
 | `PIHOLE_DNS_LAN_ENABLE`         | `false`   | `true`, `false` | Enable or disable forwarding queries for LAN to a separate DNS server
-| `PIHOLE_DNS_LAN_NETWORK`        |         | CIDR IPv4 or IPv6   | When LAN forwarding is enabled, forward reverse queries for this network range to upstream LAN DNS server
+| `PIHOLE_DNS_LAN_NETWORK`        |         | IPv4/6 CIDR | When LAN forwarding is enabled, forward reverse queries for this network range to upstream LAN DNS server
 | `PIHOLE_DNS_LAN_UPSTREAM`       |         |             | When LAN forwarding is enabled, use this DNS server to resolve LAN queries
 | `PIHOLE_DNS_PRIVACY_LVL`        | `0`       | [See docs](https://docs.pi-hole.net/ftldns/privacylevels/)    | Specifies level of detail given in Pi-hole statistics.
 | `PIHOLE_DNS_UPSTREAM_1`*        |         | IPv4/6 addr | Primary upstream DNS server
@@ -93,12 +93,12 @@ docker run \
 | `PIHOLE_DNS_UPSTREAM_3`         |         | IPv4/6 addr | Tertiary upstream DNS server
 | `PIHOLE_DNS_UPSTREAM_4`         |         | IPv4/6 addr | Quaternary upstream DNS server
 | `PIHOLE_DNS_USER`               | `pihole`  |             | User which runs `pihole-FTL` (can be `root`)
-| `PIHOLE_IPV4_ADDRESS`           | `0.0.0.0`, `auto`, IPv4 addr | Your Pi-hole's address, used to redirect/block requests
-| `PIHOLE_IPV6_ADDRESS`           | `::`, `auto`, IPv6 addr   | Your Pi-hole's address, used to redirect/block requests
-| `PIHOLE_LISTEN`                 | `all`     | `all`, `iface`, `local` | 
+| `PIHOLE_IPV4_ADDRESS`           | `0.0.0.0` | `auto`, IPv4 addr | Your Pi-hole's address, used to redirect/block requests
+| `PIHOLE_IPV6_ADDRESS`           | `::`      | `auto`, IPv6 addr | Your Pi-hole's address, used to redirect/block requests
+| `PIHOLE_LISTEN`                 | `all`     | `all`, `iface`, `local` | Listen to all `local` subnets, `all` networks (including the Internet), or a specified `iface`
 | `PIHOLE_INTERFACE`              |         |             | When `PIHOLE_LISTEN` is `iface`, specifies the interface used to listen for DNS queries and HTTP requests
 | `PIHOLE_TEMPERATURE_UNIT`       | `F`       | `F`, `C`, `K`     |
-| `PIHOLE_WEB_HOSTNAME`           | `\`hostname -f\`` |     | The hostname used to access the Pi-hole admin page
+| `PIHOLE_WEB_HOSTNAME`           | `hostname -f` |         | The hostname used to access the Pi-hole admin page
 | `PIHOLE_WEB_PASSWORD`           | randomized |          | The password required to access the Pi-hole admin page. See `pihole logs pihole` to find the randomized password
 | `PIHOLE_WEB_PASSWORD_FILE`      |         |             | Filename containing password, will override `PIHOLE_PASSWORD` if it's set.
 | `PIHOLE_WEB_PORT`               | `80`      |             | Which port the admin page is listening on

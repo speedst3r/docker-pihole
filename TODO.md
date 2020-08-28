@@ -1,3 +1,4 @@
+* [ ] Implement LAN forwarding
 * [ ] Write `$PIHOLE_WEB_HOSTNAME` to /etc/pihole/custom.list
 * [ ] Support for DNS-over-HTTPS
   * [ ] Quad9
