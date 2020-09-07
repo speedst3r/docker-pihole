@@ -1,3 +1,4 @@
+* [ ] Test docker builds on GitHub before publishing
 * [ ] Implement LAN forwarding
 * [ ] Admin page listes on separate port than block page
 * [ ] Support HTTPS for block page

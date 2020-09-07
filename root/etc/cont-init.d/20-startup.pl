@@ -9,7 +9,7 @@ use Socket qw(AF_INET AF_INET6 SOCK_STREAM);
 use Data::Dumper;
 use File::Find qw(find);
 use File::Temp qw(tempfile);
-use Carp qw(carp croak);
+use Carp qw(croak);
 
 ###############################################################################
 
@@ -395,8 +395,7 @@ sub configure_pihole ($$$@) {
 
 sub configure_temperature ($) {
     my ($unit) = @_;
-    validate("PIHOLE_TEMPERATURE_UNIT", 0, $unit, "k", "f", "c", "K", "F", "C");
-    do_or_die("pihole", "-a", "-".lc($unit->val())) if $unit->exists();
+    configure_pihole("PIHOLE_TEMPERATURE_UNIT", 0, $unit, "K", "F", "C");
 }
 
 sub configure_web_address ($$$) {
@@ -459,7 +458,7 @@ sub configure_web_password ($$) {
         say "Generated new random web admin password: ".$pw->val();
     }
 
-    do_or_die("pihole", "-a", "-p", $pw->val(), $pw->val());
+    configure_pihole("WEBPASSWORD", 0, $pw);
 }
 
 # TODO this file isn't used (yet)
@@ -626,7 +625,7 @@ sub set_defaults (\%) {
     $env->{"PIHOLE_DNS_BOGUS_PRIV"             } //= "true";
     $env->{"PIHOLE_DNS_CNAME_INSPECT"          } //= "true";
     $env->{"PIHOLE_DNS_PRIVACY_LVL"            } //= "0";
-    $env->{"PIHOLE_DNS_DNSSEC"                 } //= "false";
+    $env->{"PIHOLE_DNS_DNSSEC"                 } //= "true";
     $env->{"PIHOLE_DNS_FQDN_REQUIRED"          } //= "true";
     $env->{"PIHOLE_DNS_IGNORE_LOCALHOST"       } //= "false";
     $env->{"PIHOLE_DNS_LOG_QUERIES",           } //= "true";

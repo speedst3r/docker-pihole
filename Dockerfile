@@ -11,16 +11,15 @@ ARG PIHOLE_SKIP_OS_CHECK=true
 
 RUN apt-get update
 RUN apt-get install --no-install-recommends -y \
-      curl procps ca-certificates netcat-openbsd #debconf-utils
+      curl procps ca-certificates netcat-openbsd
 
 # curl in armhf-buster's image has SSL issues. Running c_rehash fixes it.
 # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=923479
 RUN c_rehash
 
-COPY Dockerfile.sh          /
-COPY root/s6/service        /usr/local/bin/service
-COPY root/s6/debian-root    /
-RUN touch                   /.dockerenv
+COPY Dockerfile.sh /
+COPY root/         /
+RUN touch          /.dockerenv
 
 # Hard to track down issue: COPY uses the file permissions from the working dir,
 # which ought to be 0755... but when they're 0700, we see strange errors about

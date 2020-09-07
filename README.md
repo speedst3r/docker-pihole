@@ -10,6 +10,8 @@
 A [Docker project](https://www.docker.com/what-docker) to make a lightweight x86 or ARM container with [Pi-hole](https://pi-hole.net/) functinnality.
 
 [![build status](https://github.com/rndnoise/docker-pi-hole/workflows/buildx/badge.svg)](https://github.com/rndnoise/docker-pi-hole/actions?query=workflow%3Abuildx)
+[![docker stars](https://img.shields.io/docker/stars/whoville/pihole.svg?maxAge=604800)](https://hub.docker.com/r/whoville/pihole)
+[![docker pulls](https://img.shields.io/docker/pulls/whoville/pihole.svg?maxAge=604800)](https://hub.docker.com/r/whoville/pihole)
 
 ## Quick start
 
@@ -126,3 +128,8 @@ This docker image doesn't support configuring FTLDNS as a DHCP server. Instead, 
 local=/lan/                   # answer queries from this domain using host files
 hostsdir=/etc/dnsmasq.d/lan   # files in thtis directory will be used as host files
 ```
+## Upgrade notices
+
+### Docker Pi-hole v5.1.2
+
+This version was forked from [pi-hole/docker-pi-hole](https://github.com/pi-hole/docker-pi-hole/tree/v5.1.2) and then largely rewritten. The build has been rewritten using a single `Dockerfile` and one installation script, `Dockerfile.sh`. Multiarch images are built using `docker buildx` via GitHub actions and automatically published to Docker Hub. The startup shell scripts that configured Pi-hole have been replaced with a single Perl script. 
