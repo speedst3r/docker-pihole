@@ -5,10 +5,10 @@
 </p>
 
 
-![build status](      https://github.com/rndnoise/docker-pi-hole/workflows/buildx/badge.svg)
-![release version](   https://img.shields.io/github/v/release/rndnoise/docker-pihole.svg?maxAge=604800&sort=semVer)
+![build status](      https://github.com/rndnoise/docker-pi-hole/workflows/build/badge.svg)
+![release version](   https://img.shields.io/github/v/release/rndnoise/docker-pihole.svg?maxAge=604800)
 ![release date](      https://img.shields.io/github/release-date/rndnoise/docker-pihole.svg?maxAge=604800)
-![unreleased commits](https://img.shields.io/github/commits-since/rndnoise/docker-pihole/latest.svg?maxAge=604800&sort=semVer)
+![unreleased commits](https://img.shields.io/github/commits-since/rndnoise/docker-pihole/latest.svg?maxAge=604800)
 
 ## Overview
 
