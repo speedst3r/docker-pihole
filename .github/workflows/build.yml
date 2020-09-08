@@ -129,11 +129,6 @@ jobs:
           path: /tmp/buildx-cache
           restore-keys: ${{ runner.os }}-buildx-
 
-      - name: inspect image
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-        run: docker buildx imagetools inspect "$DOCKERHUB_USERNAME/${{ needs.build.outputs.docker_image }}:${{ needs.build.outputs.version }}"
-
       - name: docker hub login
         if: ${{ success() }}
         env:

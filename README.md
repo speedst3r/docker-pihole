@@ -5,13 +5,14 @@
 </p>
 
 
+![build status](      https://github.com/rndnoise/docker-pi-hole/workflows/buildx/badge.svg)
+![release version](   https://img.shields.io/github/v/release/rndnoise/docker-pihole.svg?maxAge=604800&sort=semVer)
+![release date](      https://img.shields.io/github/release-date/rndnoise/docker-pihole.svg?maxAge=604800)
+![unreleased commits](https://img.shields.io/github/commits-since/rndnoise/docker-pihole/latest.svg?maxAge=604800&sort=semVer)
+
 ## Overview
 
 A [Docker project](https://www.docker.com/what-docker) to make a lightweight x86 or ARM container with [Pi-hole](https://pi-hole.net/) functinnality.
-
-[![build status](https://github.com/rndnoise/docker-pi-hole/workflows/buildx/badge.svg)](https://github.com/rndnoise/docker-pi-hole/actions?query=workflow%3Abuildx)
-[![docker stars](https://img.shields.io/docker/stars/whoville/pihole.svg?maxAge=604800)](https://hub.docker.com/r/whoville/pihole)
-[![docker pulls](https://img.shields.io/docker/pulls/whoville/pihole.svg?maxAge=604800)](https://hub.docker.com/r/whoville/pihole)
 
 ## Quick start
 
