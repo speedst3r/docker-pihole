@@ -17,18 +17,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@2036a08e25fa78bbd946711a407b529a0a1204bf #v2.3.2
 
       - name: setup docker buildx
         id: buildx
-        uses: crazy-max/ghaction-docker-buildx@v3
+        uses: crazy-max/ghaction-docker-buildx@bb77f35f7a82f54fcda51000ea4e4467825014fd #v3.3.0
         with:
           qemu-version: latest
           buildx-version: latest
 
       - name: setup cache
         id: cache
-        uses: actions/cache@v2
+        uses: actions/cache@5ca27f25cb3a0babe750cad7e4fddd3e55f29e9a #v2.1.1
         with:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           path: /tmp/buildx-cache
@@ -112,18 +112,18 @@ jobs:
     needs: build
     steps:
       - name: checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@2036a08e25fa78bbd946711a407b529a0a1204bf #v2.3.2
 
       - name: setup docker buildx
         id: buildx
-        uses: crazy-max/ghaction-docker-buildx@v3
+        uses: crazy-max/ghaction-docker-buildx@bb77f35f7a82f54fcda51000ea4e4467825014fd #v3.3.0
         with:
           qemu-version: latest
           buildx-version: latest
 
       - name: setup cache
         id: cache
-        uses: actions/cache@v2
+        uses: actions/cache@5ca27f25cb3a0babe750cad7e4fddd3e55f29e9a #v2.1.1
         with:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           path: /tmp/buildx-cache
@@ -155,7 +155,7 @@ jobs:
             .
 
       - name: create release
-        uses: actions/create-release@v1
+        uses: actions/create-release@1e92f6fc665e271a5435631ba00711fdd83d9d27 #v1.1.3
         if: ${{ success() && github.event_name == 'tag' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

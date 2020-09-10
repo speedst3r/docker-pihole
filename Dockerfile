@@ -1,4 +1,4 @@
-FROM debian:stretch-slim
+FROM debian:buster-slim
 
 # Build time environment
 ARG TARGETPLATFORM
@@ -35,6 +35,11 @@ ENV S6_LOGGING=0                        \
 
 RUN /Dockerfile.sh && \
     rm -rf /Dockerfile.sh /var/cache/apt/archives /var/lib/apt/lists/*
+
+EXPOSE  53/udp
+EXPOSE  53/tcp
+EXPOSE  80/tcp
+EXPOSE 443/tcp
 
 SHELL       ["/bin/bash", "-c"]
 WORKDIR     /

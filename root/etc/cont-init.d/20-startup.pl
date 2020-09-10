@@ -458,7 +458,7 @@ sub configure_web_password ($$) {
         say "Generated new random web admin password: ".$pw->val();
     }
 
-    configure_pihole("WEBPASSWORD", 0, $pw);
+    do_or_die("pihole", "-a", "-p", $pw);
 }
 
 # TODO this file isn't used (yet)
