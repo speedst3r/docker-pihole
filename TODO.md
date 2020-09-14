@@ -1,3 +1,6 @@
+* [ ] Disable CHAOS TXT records in .bind, .ftl, and .pihole domains: this has been submitted to upstream repo
+* [ ] Fix cron issues, logrotate
+* [ ] Further restrict /etc/sudoers.d/pihole 
 * [ ] Reduce image size where possible
 * [ ] Support HTTPS for admin and blocked pages
 * [ ] Script to synchronize gravity.db across containers
