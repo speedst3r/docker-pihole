@@ -1,3 +1,4 @@
+* [ ] Detect when UID and GID match between host and container, skip reown process
 * [ ] Disable CHAOS TXT records in .bind, .ftl, and .pihole domains: this has been submitted to upstream repo
 * [ ] Fix cron issues, logrotate
 * [ ] Further restrict /etc/sudoers.d/pihole 

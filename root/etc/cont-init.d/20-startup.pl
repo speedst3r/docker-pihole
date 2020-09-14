@@ -796,7 +796,7 @@ sub main {
     `kill -9 $(pgrep pihole-FTL) || echo pihole-FTL is not already running`
 
     # Remove crontab installed by pihole, we have our own
-    do_or_die("rm", "-f", "/etc/cron.d/pihole")
+    do_or_die("rm", "-f", "/etc/cron.d/pihole");
 }
 
 ###############################################################################

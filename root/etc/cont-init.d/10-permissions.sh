@@ -24,6 +24,11 @@ function reown {
             ;;
     esac
 
+    if [ $old -eq $new ]; then
+        echo "not changing id of $kind $name, it already matches host"
+        return
+    fi
+
     echo "changing id of $kind $name from $old to $new"
     $mod $new $name
 
