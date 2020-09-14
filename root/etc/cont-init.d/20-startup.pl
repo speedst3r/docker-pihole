@@ -793,7 +793,7 @@ sub main {
     test_configuration(env("PIHOLE_DNS_USER"));
 
     # s6 doesn't like it when pihole-FTL is running when s6 services start
-    `kill -9 $(pgrep pihole-FTL) || echo pihole-FTL is not already running`
+    `kill -9 \$(pgrep pihole-FTL) || echo pihole-FTL is not already running`;
 
     # Remove crontab installed by pihole, we have our own
     do_or_die("rm", "-f", "/etc/cron.d/pihole");
