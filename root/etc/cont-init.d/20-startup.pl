@@ -82,7 +82,7 @@ sub lit ($)     { return Cvar->lit(@_); }
 sub configure ($$$$@);
 sub configure_admin_email ($);
 sub configure_blocklists ();
-sub configure_dhcp ();
+sub configure_crontab ($);
 sub configure_dns_defaults ();
 sub configure_dns_hostname ($$@);
 sub configure_dns_fqdn ($);
@@ -95,6 +95,7 @@ sub configure_dns_user ($);
 sub configure_ftl ($$$@);
 sub configure_network (\%$$);
 sub configure_pihole ($$$@);
+sub configure_sudo ($);
 sub configure_temperature ($);
 sub configure_web_address ($$$);
 sub configure_web_fastcgi ($$);
@@ -149,7 +150,19 @@ sub configure_blocklists () {
     write_conf($path, @items);
 }
 
-sub configure_dhcp() {
+sub configure_crontab ($) {
+    my ($dns_user) = @_;
+
+    # Remove crontab installed by pihole, we have our own
+    write_conf("/etc/cron.d/pihole",
+        "PATH=/opt/pihole:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin",
+        "",
+        "#----------------------------------------------------------------------------",
+        "# Min    Hour    Day     Month   Weekday   User    Command",
+        "#----------------------------------------------------------------------------",
+        "  15     0       *       *       *         ".$dns_user->val()."    (date && pihole flush && echo) >>/var/log/pihole/cron.log",
+        "  45     3       *       *       6         ".$dns_user->val()."    (date && pihole -g && echo)    >>/var/log/pihole/cron.log",
+        "\@reboot                                   ".$dns_user->val()."    (date && pihole -g && echo)    >>/var/log/pihole/cron.log");
 }
 
 sub configure_dns_defaults () {
@@ -391,6 +404,14 @@ sub configure_network (\%$$) {
 # Change an option in setupVars.conf
 sub configure_pihole ($$$@) {
     return &configure($PIHOLE_CONF, @_);
+}
+
+sub configure_sudo ($) {
+    my ($dns_user) = @_;
+
+    write_conf("/etc/sudoers.d/pihole",
+      "# Allow web interface to execute pihole command",
+      "www-data ALL=(pihole:pihole) NOPASSWD:NOEXEC: /usr/local/bin/pihole");
 }
 
 sub configure_temperature ($) {
@@ -765,8 +786,6 @@ sub main {
     configure_temperature(env("PIHOLE_TEMPERATURE_UNIT"));
     configure_admin_email(env("PIHOLE_ADMIN_EMAIL"));
 
-    configure_dhcp();
-
     configure_pihole("QUERY_LOGGING"                 , 0, env("PIHOLE_DNS_LOG_QUERIES"),   "true", "false");
     configure_pihole("INSTALL_WEB_SERVER"            , 0, env("PIHOLE_WEB_INSTALL_SERVER"),"true", "false");
     configure_pihole("INSTALL_WEB_INTERFACE"         , 0, env("PIHOLE_WEB_INSTALL_UI"),    "true", "false");
@@ -789,14 +808,14 @@ sub main {
     configure_blocklists();
     configure_whitelists();
 
+    configure_sudo(env("PIHOLE_DNS_USER"));
+    configure_crontab(env("PIHOLE_DNS_USER"));
+
     sync_files();
     test_configuration(env("PIHOLE_DNS_USER"));
 
     # s6 doesn't like it when pihole-FTL is running when s6 services start
     `kill -9 \$(pgrep pihole-FTL) || echo pihole-FTL is not already running`;
-
-    # Remove crontab installed by pihole, we have our own
-    do_or_die("rm", "-f", "/etc/cron.d/pihole");
 }
 
 ###############################################################################
