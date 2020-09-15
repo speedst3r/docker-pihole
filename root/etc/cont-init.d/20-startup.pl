@@ -95,7 +95,7 @@ sub configure_dns_user ($);
 sub configure_ftl ($$$@);
 sub configure_network (\%$$);
 sub configure_pihole ($$$@);
-sub configure_sudo ($);
+sub configure_sudo ($$);
 sub configure_temperature ($);
 sub configure_web_address ($$$);
 sub configure_web_fastcgi ($$);
@@ -162,7 +162,7 @@ sub configure_crontab ($) {
         "#----------------------------------------------------------------------------",
         "  15     0       *       *       *         ".$dns_user->val()."    (date && pihole flush && echo) >>/var/log/pihole/cron.log",
         "  45     3       *       *       6         ".$dns_user->val()."    (date && pihole -g && echo)    >>/var/log/pihole/cron.log",
-        "\@reboot                                   ".$dns_user->val()."    (date && pihole -g && echo)    >>/var/log/pihole/cron.log");
+        "\@reboot                                    ".$dns_user->val()."    (date && pihole -g && echo)    >>/var/log/pihole/cron.log");
 }
 
 sub configure_dns_defaults () {
@@ -406,12 +406,29 @@ sub configure_pihole ($$$@) {
     return &configure($PIHOLE_CONF, @_);
 }
 
-sub configure_sudo ($) {
-    my ($dns_user) = @_;
+sub configure_sudo ($$) {
+    my ($dns_user, $www_user) = @_;
 
     write_conf("/etc/sudoers.d/pihole",
-      "# Allow web interface to execute pihole command",
-      "www-data ALL=(pihole:pihole) NOPASSWD:NOEXEC: /usr/local/bin/pihole");
+      # Web UI wants to run "sudo root pihole"
+      sprintf("%s ALL=(%s:%s) NOPASSWD: /usr/local/bin/pihole",
+        $www_user->val(), $dns_user->val(), $dns_user->val()));
+
+    # Web app wants to change to root, even though it's not needed
+    do_or_die("mv", "/usr/bin/sudo", "/usr/bin/sudo.xxx")
+        if (!-f "/usr/bin/sudo.xxx");
+
+    write_file("/usr/bin/sudo",
+      "#!/bin/sh",
+      "/usr/bin/sudo.xxx -H -u ".$dns_user->val().' "$@"');
+
+    do_or_die("chmod", "755", "/usr/bin/sudo");
+
+    # This command checks if it's root, even though it doesn't need to be root
+    chomp(my $path = `which pihole`);
+    write_conf($path,
+        (sed { /^\s*if .*EUID.*0/ } "if false; then",
+            read_conf($path)));
 }
 
 sub configure_temperature ($) {
@@ -517,30 +534,37 @@ sub fix_capabilities ($) {
 sub fix_permissions ($) {
     my $dns = $_[0]->val();
     my $www = "www-data";
+    my $group = "pihole";
+
+    do_or_die("adduser", $dns, $group);
+    do_or_die("adduser", $www, $group);
 
     my @files = (
-        {type=>"d", path=>"/etc/lighttpd",                uid=>"root", gid=>"root", mode=>"0755"},
-        {type=>"d", path=>"/etc/pihole",                  uid=>$dns,   gid=>"root", mode=>"0755"}, # TODO
-        {type=>"d", path=>"/var/cache/lighttpd/compress", uid=>$www,   gid=>"root", mode=>"0755"},
-        {type=>"d", path=>"/var/cache/lighttpd/uploads",  uid=>$www,   gid=>"root", mode=>"0755"},
         {type=>"d", path=>"/var/log",                     uid=>"root", gid=>"root", mode=>"0755"},
-        {type=>"d", path=>"/var/log/lighttpd",            uid=>$www,   gid=>"root", mode=>"0755"},
+
+        {type=>"d", path=>"/etc/pihole",                  uid=>$dns,   gid=>$group, mode=>"0775"},
+        {type=>"f", path=>"/etc/pihole/custom.list",      uid=>$dns,   gid=>$group, mode=>"0660"},
+        {type=>"f", path=>"/etc/pihole/local.list",       uid=>$dns,   gid=>$group, mode=>"0640"},
+        {type=>"f", path=>"/etc/pihole/dhcp.leases",      uid=>$dns,   gid=>$group, mode=>"0640"},
+        {type=>"f", path=>"/etc/pihole/dns-servers.conf", uid=>$dns,   gid=>$group, mode=>"0640"},
+        {type=>"f", path=>"/etc/pihole/pihole-FTL.conf",  uid=>$dns,   gid=>$group, mode=>"0660"},
+        {type=>"f", path=>"/etc/pihole/regex.list",       uid=>$dns,   gid=>$group, mode=>"0640"},
+        {type=>"f", path=>"/etc/pihole/setupVars.conf",   uid=>$dns,   gid=>$group, mode=>"0660"},
         {type=>"d", path=>"/var/log/pihole",              uid=>$dns,   gid=>"root", mode=>"0755"},
-        {type=>"d", path=>"/run/lighttpd",                uid=>$www,   gid=>"root", mode=>"0755"},
         {type=>"d", path=>"/run/pihole",                  uid=>$dns,   gid=>"root", mode=>"0755"},
-        {type=>"f", path=>"/etc/pihole/custom.list",      uid=>$dns,   gid=>"root", mode=>"0644"},
-        {type=>"f", path=>"/etc/pihole/dhcp.leases",      uid=>$dns,   gid=>"root", mode=>"0644"},
-        {type=>"f", path=>"/etc/pihole/dns-servers.conf", uid=>$dns,   gid=>"root", mode=>"0644"},
-        {type=>"f", path=>"/etc/pihole/pihole-FTL.conf",  uid=>$dns,   gid=>"root", mode=>"0644"},
-        {type=>"f", path=>"/etc/pihole/regex.list",       uid=>$dns,   gid=>"root", mode=>"0644"},
-        {type=>"f", path=>"/etc/pihole/setupVars.conf",   uid=>$dns,   gid=>"root", mode=>"0644"},
         {type=>"f", path=>"/var/log/pihole.log",          uid=>$dns,   gid=>"root", mode=>"0644"},
         {type=>"f", path=>"/var/log/pihole-FTL.log",      uid=>$dns,   gid=>"root", mode=>"0644"},
-        {type=>"f", path=>"/var/log/lighttpd/access.log", uid=>$www,   gid=>"root", mode=>"0644"},
-        {type=>"f", path=>"/var/log/lighttpd/error.log",  uid=>$www,   gid=>"root", mode=>"0644"},
         {type=>"f", path=>"/run/pihole-FTL.pid",          uid=>$dns,   gid=>"root", mode=>"0644"},
         {type=>"f", path=>"/run/pihole-FTL.port",         uid=>$dns,   gid=>"root", mode=>"0644"},
-        {type=>"x", path=>"/run/pihole/FTL.sock"}
+        {type=>"x", path=>"/run/pihole/FTL.sock"},
+
+        {type=>"d", path=>"/run/lighttpd",                uid=>$www,   gid=>"root", mode=>"0755"},
+        {type=>"d", path=>"/etc/lighttpd",                uid=>"root", gid=>"root", mode=>"0755"},
+        {type=>"d", path=>"/var/log/lighttpd",            uid=>$www,   gid=>"root", mode=>"0755"},
+        {type=>"d", path=>"/var/cache/lighttpd/compress", uid=>$www,   gid=>"root", mode=>"0755"},
+        {type=>"d", path=>"/var/cache/lighttpd/uploads",  uid=>$www,   gid=>"root", mode=>"0755"},
+        {type=>"f", path=>"/var/log/lighttpd/access.log", uid=>$www,   gid=>"root", mode=>"0644"},
+        {type=>"f", path=>"/var/log/lighttpd/error.log",  uid=>$www,   gid=>"root", mode=>"0644"}
     );
 
     my %grouped = (
@@ -636,10 +660,6 @@ sub sed (&$@) {
 
 sub set_defaults (\%) {
     my ($env) = @_;
-
-    # TODO: Default value set here isn't read by services.d/pihole-FTL/run
-    exists $env->{"PIHOLE_DNS_USER"}
-        or croak("PIHOLE_DNS_USER should be set in Dockerfile, docker-compose.yml, or passed via docker run -e...");
 
     $env->{"PIHOLE_ADMIN_EMAIL"                } //= "root\@example.com";
     $env->{"PIHOLE_DNS_BLOCKING_MODE"          } //= "NULL";
@@ -753,8 +773,8 @@ sub main {
     set_defaults(%ENV);
     print_env(%ENV);
 
-    fix_permissions(env("PIHOLE_DNS_USER"));
-    fix_capabilities(env("PIHOLE_DNS_USER"));
+    fix_permissions(lit("pihole"));
+    fix_capabilities(lit("pihole"));
 
     configure_dns_defaults();
     configure_network(%ENV, env("PIHOLE_IPV4_ADDRESS"), env("PIHOLE_IPV6_ADDRESS"));
@@ -767,7 +787,7 @@ sub main {
     configure_web_fastcgi(env("PIHOLE_IPV4_ADDRESS"), env("PIHOLE_WEB_HOSTNAME"));
 
     configure_dns_interface(env("PIHOLE_LISTEN"), env("PIHOLE_INTERFACE"));
-    configure_dns_user(env("PIHOLE_DNS_USER"));
+    configure_dns_user(lit("pihole"));
     configure_dns_hostname(env("PIHOLE_IPV4_ADDRESS"), env("PIHOLE_IPV6_ADDRESS"), env("PIHOLE_WEB_HOSTNAME"));
     configure_dns_fqdn(env("PIHOLE_DNS_FQDN_REQUIRED"));
     configure_dns_priv(env("PIHOLE_DNS_BOGUS_PRIV"));
@@ -808,8 +828,8 @@ sub main {
     configure_blocklists();
     configure_whitelists();
 
-    configure_sudo(env("PIHOLE_DNS_USER"));
-    configure_crontab(env("PIHOLE_DNS_USER"));
+    configure_sudo(lit("pihole"), lit("www-data"));
+    configure_crontab(lit("pihole"));
 
     sync_files();
     test_configuration(env("PIHOLE_DNS_USER"));
