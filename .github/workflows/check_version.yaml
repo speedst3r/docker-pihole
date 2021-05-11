@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: development
       - name: Check Official Pi-Hole docker release
         id: piholedocker
         uses: pozetroninc/github-action-get-latest-release@master
@@ -51,6 +53,8 @@ jobs:
           repo: AdminLTE
       - name: Check out code
         uses: actions/checkout@v2
+        with:
+          ref: development
       - name: Update Dockerfile
         id: update
         run: |
