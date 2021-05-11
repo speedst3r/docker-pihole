@@ -60,8 +60,7 @@ jobs:
         id: update
         run: |
           sed -E "s/FTL_VERSION=v[0-9]+\.[0-9]+(\.[0-9]+)*/FTL_VERSION=${{ steps.ftl.outputs.release }}/g;s/WEB_VERSION=v[0-9]+\.[0-9]+(\.[0-9]+)*/WEB_VERSION=${{ steps.adminweb.outputs.release }}/g;s/CORE_VERSION=v[0-9]+\.[0-9]+(\.[0-9]+)*/CORE_VERSION=${{ steps.pihole.outputs.release }}/g" Dockerfile 
-#      - name: Auto commit
-#        uses: stefanzweifel/git-auto-commit-action@v4
-#        with:
-#          commit_message: Update to ${{ steps.update.outputs.flux_version }}
-#          branch: master
+      - uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ needs.check_version.outputs.piholever }}
+          token: ${{ secrets.GITHUB_TOKEN }}
