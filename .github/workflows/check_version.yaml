@@ -1,4 +1,4 @@
-name: update-flux
+name: check-pihole-version
 
 on:
   workflow_dispatch:
