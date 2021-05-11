@@ -19,7 +19,8 @@ jobs:
         id: localdocker
         uses: pozetroninc/github-action-get-latest-release@master
         with:
-          repo: ${{ github.repository }}
+          owner: speedst3r
+          repo: docker-pihole
       - name: Output versions
         run: |
           echo ::set-output name=piholever::${{ steps.piholedocker.outputs.release }}
