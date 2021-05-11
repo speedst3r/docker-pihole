@@ -5,14 +5,16 @@
 </p>
 
 
-![build status](      https://github.com/rndnoise/docker-pi-hole/workflows/build/badge.svg)
-![release version](   https://img.shields.io/github/v/release/rndnoise/docker-pihole.svg?maxAge=604800)
-![release date](      https://img.shields.io/github/release-date/rndnoise/docker-pihole.svg?maxAge=604800)
-![unreleased commits](https://img.shields.io/github/commits-since/rndnoise/docker-pihole/latest.svg?maxAge=604800)
+![build status](      https://github.com/speedst3r/docker-pihole/workflows/build/badge.svg)
+![release version](   https://img.shields.io/github/v/release/speedst3r/docker-pihole.svg?maxAge=604800)
+![release date](      https://img.shields.io/github/release-date/speedst3r/docker-pihole.svg?maxAge=604800)
+![unreleased commits](https://img.shields.io/github/commits-since/speedst3r/docker-pihole/latest.svg?maxAge=604800)
 
 ## Overview
 
-A [Docker project](https://www.docker.com/what-docker) to make a lightweight x86 or ARM container with [Pi-hole](https://pi-hole.net/) functinnality.
+A [Docker project](https://www.docker.com/what-docker) to make a lightweight ARMv6 container with [Pi-hole](https://pi-hole.net/) functionality for Raspberry Pi 1 and Pi 0.
+
+This container comes with ***NO SUPPORT***, it may break, not update in a timely manner etc.
 
 ## Quick start
 
@@ -24,7 +26,7 @@ version: "3"
 services:
   pihole:
     container_name: pihole
-    image: example/pihole:latest
+    image: speedst3r/pihole:latest
     ports:
       - "80:80/tcp"
       - "53:53/tcp"
@@ -72,7 +74,7 @@ docker run \
   --volume "$(pwd)/pihole/var-log:/var/log" \
   --volume "$(pwd)/pihole/etc-pihole:/etc/pihole" \
   --volume "$(pwd)/pihole/etc-dnsmasq.d:/etc/dnsmasq.d"
-  example/pihole:latest
+  speedst3r/pihole:latest
 ```
 
 ## Environment variables
@@ -133,4 +135,4 @@ hostsdir=/etc/dnsmasq.d/lan   # files in thtis directory will be used as host fi
 
 ### Docker Pi-hole v5.1.2
 
-This version was forked from [pi-hole/docker-pi-hole](https://github.com/pi-hole/docker-pi-hole/tree/v5.1.2) and then largely rewritten. The build has been rewritten using a single `Dockerfile` and one installation script, `Dockerfile.sh`. Multiarch images are built using `docker buildx` via GitHub actions and automatically published to Docker Hub. The startup shell scripts that configured Pi-hole have been replaced with a single Perl script. 
+This version was forked from [rndnoise/docker-pihole](https://github.com/rndnoise/docker-pihole/) and then adding GitHub Actions to check daily for a new upstream release, update the Dockerfile versions and push a new local release.

@@ -2,8 +2,6 @@ name: build
 
 on:
   push:
-    branches:
-      - development
     tags:
       - v*
 
@@ -145,6 +143,7 @@ jobs:
             --cache-from  "type=local,src=/tmp/buildx-cache" \
             --platform    "${{ needs.build.outputs.docker_platforms }}" \
             --tag         "$DOCKERHUB_USERNAME/${{ needs.build.outputs.docker_image }}:${{ needs.build.outputs.version }}" \
+            --tag         "$DOCKERHUB_USERNAME/${{ needs.build.outputs.docker_image }}:latest" \
             --label       "org.opencontainers.image.created=${{  needs.build.outputs.date }}" \
             --label       "org.opencontainers.image.revision=${{ needs.build.outputs.gitsha }}" \
             --label       "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
