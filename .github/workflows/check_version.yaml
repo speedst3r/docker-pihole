@@ -19,12 +19,12 @@ jobs:
       - name: Check local repo release
         id: localdocker
         run: |
+          git tag --sort v:refname | tail -n 1
           LOCALTAG="$(git tag --sort v:refname | tail -n 1)"
-          echo ::set-output name=release::$LOCALTAG
+          echo ::set-output name=localver::$LOCALTAG
       - name: Output versions
         run: |
           echo ::set-output name=piholever::${{ steps.piholedocker.outputs.release }}
-          echo ::set-output name=localver::${{ steps.localdocker.outputs.release }}
 
   update_docker:
     runs-on: ubuntu-latest
