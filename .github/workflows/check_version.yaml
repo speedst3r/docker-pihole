@@ -9,6 +9,7 @@ jobs:
   check_version:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
       - name: Check Official Pi-Hole docker release
         id: piholedocker
         uses: pozetroninc/github-action-get-latest-release@master
@@ -17,10 +18,9 @@ jobs:
           repo: docker-pi-hole
       - name: Check local repo release
         id: localdocker
-        uses: pozetroninc/github-action-get-latest-release@master
-        with:
-          owner: speedst3r
-          repo: docker-pihole
+        run: |
+          LOCALTAG="$(git tag --sort v:refname | tail -n 1)"
+          echo ::set-output name=release::$LOCALTAG
       - name: Output versions
         run: |
           echo ::set-output name=piholever::${{ steps.piholedocker.outputs.release }}
