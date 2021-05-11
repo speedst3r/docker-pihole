@@ -21,6 +21,7 @@ jobs:
       - name: Check local repo release
         id: localdocker
         run: |
+          git checkout development
           git tag --sort v:refname | tail -n 1
           LOCALTAG="$(git tag --sort v:refname | tail -n 1)"
           echo ::set-output name=localver::$LOCALTAG
