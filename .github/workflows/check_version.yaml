@@ -24,14 +24,14 @@ jobs:
         run: |
           LOCALTAG="$(git tag --sort v:refname | tail -n 1)"
           echo "::set-output name=localver::$LOCALTAG"
-      - name: Output versions
-        run: |
-          echo "::set-output name=piholever::${{ steps.piholedocker.outputs.release }}"
+    outputs:
+      piholever: ${{ steps.piholedocker.outputs.release }}
+      localver: ${{ steps.localdocker.outputs.localver }}
 
   update_docker:
     runs-on: ubuntu-latest
     needs: check_version
-    if: needs.check_version.outputs.piholever != needs.check_version.outputs.localver
+    if: ${{ needs.check_version.outputs.piholever != needs.check_version.outputs.localver }}
     steps: 
       - name: Check Pi-hole core version
         id: pihole
