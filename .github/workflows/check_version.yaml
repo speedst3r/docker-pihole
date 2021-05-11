@@ -1,0 +1,61 @@
+name: update-flux
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * *"
+
+jobs:
+  check_version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Official Pi-Hole docker release
+        id: piholedocker
+        uses: pozetroninc/github-action-get-latest-release@master
+        with:
+          owner: pi-hole
+          repo: docker-pi-hole
+      - name: Check local repo release
+        id: localdocker
+        uses: pozetroninc/github-action-get-latest-release@master
+        with:
+          repo: ${{ github.repository }}
+      - name: Output versions
+        run: |
+          echo ::set-output name=piholever::${{ steps.piholedocker.outputs.release }}
+          echo ::set-output name=localver::${{ steps.localdocker.outputs.release }}
+
+  update_docker:
+    runs-on: ubuntu-latest
+    needs: check_version
+    if: ${{ needs.check_version.outputs.piholever != needs.check_version.outputs.localver }}
+    steps: 
+      - name: Check Pi-hole core version
+        id: pihole
+        uses: pozetroninc/github-action-get-latest-release@master
+        with:
+          owner: pi-hole
+          repo: pi-hole
+      - name: Check Pi-hole FTL version
+        id: ftl
+        uses: pozetroninc/github-action-get-latest-release@master
+        with:
+          owner: pi-hole
+          repo: FTL
+      - name: Check Pi-hole FTL version
+        id: adminweb
+        uses: pozetroninc/github-action-get-latest-release@master
+        with:
+          owner: pi-hole
+          repo: AdminLTE
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Update Dockerfile
+        id: update
+        run: |
+          sed -E "s/FTL_VERSION=v[0-9]+\.[0-9]+(\.[0-9]+)*/FTL_VERSION=${{ steps.ftl.outputs.release }}/g;s/WEB_VERSION=v[0-9]+\.[0-9]+(\.[0-9]+)*/WEB_VERSION=${{ steps.adminweb.outputs.release }}/g;s/CORE_VERSION=v[0-9]+\.[0-9]+(\.[0-9]+)*/CORE_VERSION=pihole/g" Dockerfile 
+#      - name: Auto commit
+#        uses: stefanzweifel/git-auto-commit-action@v4
+#        with:
+#          commit_message: Update to ${{ steps.update.outputs.flux_version }}
+#          branch: master
